@@ -227,20 +227,20 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
 
     files = find_model_files(directory)
 
-    tfjs_model_json = str(files.get("model.json"))
-    weights_bin = str(files.get("model.weights.bin"))
+    original_tfjs_model_json = str(files.get("model.json"))
+    original_weights_bin = str(files.get("model.weights.bin"))
 
-    tfjs_model_json, weights_bin = copy_and_patch_tfjs(tfjs_model_json, weights_bin)
+    tfjs_model_json, weights_bin = copy_and_patch_tfjs(original_tfjs_model_json, original_weights_bin)
 
     if not tfjs_model_json or not weights_bin:
         console.log("[red]Missing model files. Conversion aborted.[/red]")
         return False
 
-    if not os.path.exists(tfjs_model_json):
-        console.print(f"[yellow]⚠ Conversion not possible:[/] '{tfjs_model_json}' not found.")
+    if not os.path.exists(original_tfjs_model_json):
+        console.print(f"[yellow]⚠ Conversion not possible:[/] '{original_tfjs_model_json}' not found.")
         return False
 
-    console.print(f"[cyan]ℹ Conversion needed:[/] '{keras_h5_file}' does not exist, but '{tfjs_model_json}' found.")
+    console.print(f"[cyan]ℹ Conversion needed:[/] '{keras_h5_file}' does not exist, but '{original_tfjs_model_json}' found.")
 
     # Helper function to check if a command exists in PATH
 
