@@ -282,10 +282,8 @@ CMD ["/bin/bash"]
                 return False
             except KeyboardInterrupt:
                 progress.stop()
-                console.print("[red]✘ Docker build was cancelled:[/]")
-                console.print(Text(e.stderr.strip(), style="bold red"))
-                return False
-
+                console.print("[red]✘ Docker build was cancelled by CTRL-C[/]")
+                sys.exit(0)
 
         run_cmd = [
             'docker', 'run', '--rm',
