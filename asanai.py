@@ -1,3 +1,7 @@
+import numpy as np
+import cv2
+from skimage import transform
+from PIL import Image
 from pathlib import Path
 import re
 import argparse
@@ -197,3 +201,17 @@ CMD ["/bin/bash"]
                 return False
 
     return True
+
+def load(filename):
+    np_image = Image.open(filename)
+    np_image = np.array(np_image).astype('float32')/divideby
+    np_image = transform.resize(np_image, (height, width, 3))
+    np_image = np.expand_dims(np_image, axis=0)
+    return np_image
+
+def load_frame(filename):
+    np_image = cv2.cvtColor(filename, cv2.COLOR_BGR2RGB)
+    np_image = np.array(np_image).astype('float32')/divideby
+    np_image = transform.resize(np_image, (height, width, 3))
+    np_image = np.expand_dims(np_image, axis=0)
+    return np_image
