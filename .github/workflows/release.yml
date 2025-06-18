@@ -7,7 +7,7 @@ on:
   pull_request:
     branches:
       - '**'
-  deploy-to-pypi:
+  deploytopypi:
     permissions:
       contents: read
     environment: Production
