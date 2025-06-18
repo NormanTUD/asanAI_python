@@ -212,10 +212,7 @@ def load(filename: Union[Path, str], width: int = 224, height: int = 224, divide
 
 @beartype
 def load_frame(frame: np.ndarray, width: int = 224, height: int = 224, divideby: float = 255) -> np.ndarray:
-    """
-    Konvertiert einen BGR-Frame (OpenCV) in ein normiertes RGB-Bild mit shape (1, height, width, 3).
-    """
-    np_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    np_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # pylint: disable=no-member
     np_image = np.array(np_image).astype('float32') / divideby
     np_image = transform.resize(np_image, (height, width, 3))
     np_image = np.expand_dims(np_image, axis=0)
