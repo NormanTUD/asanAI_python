@@ -110,7 +110,7 @@ def _newest_match(directory: Union[Path, str], pattern: str) -> Optional[Path]:
     return candidates[0]
 
 @beartype
-def rename_model_files_if_needed(directory: Optional[Union[Path, str]]) -> None:
+def rename_model_files_if_needed(directory: Optional[Union[Path, str]] = ".") -> None:
     if directory is None:
         console.log("[red]No directory provided[/red]")
         return
