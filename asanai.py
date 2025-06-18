@@ -26,6 +26,21 @@ def dier (msg: Any) -> None:
 
 console = Console()
 
+@beartype
+def print_predictions_line(predictions: list, labels: list) -> None:
+    # Nehme nur den ersten Eintrag von predictions (z.B. [ [0.0026, 0.9974] ])
+    vals = predictions[0]
+
+    # Formatiere Paare label: wert mit 4 Nachkommastellen
+    parts = [f"{label}: {value:.4f}" for label, value in zip(labels, vals)]
+
+    # Verbinde alles zu einem String
+    line = "  ".join(parts)
+
+    # Schreibe in einer Zeile mit Überschreiben
+    sys.stdout.write("\r" + line + " " * 5)  # Leerzeichen am Ende löschen Reste
+    sys.stdout.flush()
+
 def _pip_install(package: str) -> bool:
     cmd = [sys.executable, "-m", "pip", "install", package]
     try:
