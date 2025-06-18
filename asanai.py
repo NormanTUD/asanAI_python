@@ -23,7 +23,6 @@ def _newest_match(directory: Union[Path, str], pattern: str) -> Path | None:
     ]
     if not candidates:
         return None
-    # sort by the integer in the first (…) group, highest first
     candidates.sort(
         key=lambda p: int(re.search(r"\((\d+)\)", p.name).group(1)),
         reverse=True,
