@@ -95,11 +95,11 @@ def install_tensorflow() -> ModuleType:
         console.print("[red]Cannot install TensorFlow via pip.[/red]")
         sys.exit(1)
 
-    # 4. Relaunch current script with original args
-    console.print("[green]TensorFlow installed successfully! Restarting script...[/green]")
-    os.execv(sys.executable, [sys.executable] + sys.argv)
+    # 4. Tell user to restart the script
+    console.print("[green]TensorFlow installed successfully! Run the script again, it should work now.[/green]")
 
-    raise RuntimeError("os.execv failed unexpectedly")
+    sys.exit(0)
+
 
 @beartype
 def _newest_match(directory: Union[Path, str], pattern: str) -> Optional[Path]:
