@@ -370,7 +370,7 @@ def load_frame(frame: np.ndarray, height: int = 224, width: int = 224, divide_by
     return None
 
 @beartype
-def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]) -> np.ndarray:
+def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]) -> Optional[np.ndarray]:
     probs = predictions[0]
     best_idx = int(np.argmax(probs))
 
@@ -385,8 +385,9 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
         console.print(
             f"[bold red]❌ Label count ({len(labels)}) does not match number of prediction probabilities ({len(probs)}).[/bold red]",
         )
-        console.print("[yellow]💡 Make sure each class has a corresponding label.[/yellow]")
-        return frame  # Return original frame unmodified to avoid crash
+        console.print("[yellow]Make sure the number of labels in your script is correct.[/yellow]")
+
+        sys.exit(0)
 
     formatted_probs = format_probabilities(probs)
 
