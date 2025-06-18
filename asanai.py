@@ -8,6 +8,8 @@ import subprocess
 from typing import Optional, Union, Any
 import shutil
 from importlib import import_module
+from contextlib import redirect_stderr, contextmanager
+import io
 
 from types import ModuleType
 import numpy as np
@@ -25,45 +27,75 @@ def dier (msg: Any) -> None:
 
 console = Console()
 
+@contextmanager
+def suppress_tf_logs():
+    # Set environment vars to suppress TensorFlow logs (level 3 = ERROR only)
+    old_level = os.environ.get("TF_CPP_MIN_LOG_LEVEL")
+    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
+    # Also suppress stderr output during this context
+    with io.StringIO() as buf, redirect_stderr(buf):
+        yield
+
+    # Restore old env var
+    if old_level is None:
+        os.environ.pop("TF_CPP_MIN_LOG_LEVEL", None)
+    else:
+        os.environ["TF_CPP_MIN_LOG_LEVEL"] = old_level
+
+
 @beartype
-def install_tensorflow() -> ModuleType:        # returns the tf module (if already installed)
+def install_tensorflow() -> ModuleType:
     """
-    Guarantee that ``tensorflow`` can be imported.
-
-    1. Try to ``import tensorflow``.
-    2. If missing and *not* inside a virtual‑env → abort with an explanatory error.
-    3. If inside a venv, run ``pip install tensorflow``; on failure try ``pip install tf_nightly``.
-    4. After a successful install, re‑exec the current interpreter with the
-       *identical* argument vector so the caller's script restarts cleanly.
-
-    On success *without* needing a reinstall the loaded TensorFlow module is
-    returned.  When an install was required the function never returns
-    because the process image is replaced via ``os.execv``.
+    Ensure tensorflow can be imported, installing it if needed inside a venv,
+    suppressing TF clutter logs, with rich output and restarting script after install.
     """
-    # --- 1. Fast‑path: TensorFlow already present ---------------------------
-    try:
-        return import_module("tensorflow")
-    except ModuleNotFoundError:
-        pass
+    console.rule("[bold cyan]Checking for TensorFlow...")
 
-    # --- 2. Ensure we are in a virtual‑env ----------------------------------
-    if sys.prefix == sys.base_prefix:   # typical venv detection
-        sys.stderr.write("Error: you need to be in a virtual environment\n")
+    # 1. Try import first, suppressing TF clutter logs here too
+    with suppress_tf_logs():
+        try:
+            tf = import_module("tensorflow")
+            console.print("[green]TensorFlow is already installed.[/green]")
+            return tf
+        except ModuleNotFoundError:
+            console.print("[yellow]TensorFlow not found. Installation required.[/yellow]")
+
+    # 2. Check virtual environment
+    if sys.prefix == sys.base_prefix:
+        console.print("[red]Error: You need to be in a virtual environment to install TensorFlow.[/red]")
         sys.exit(1)
 
-    # --- 3. Attempt installation(s) ----------------------------------------
     def _pip_install(package: str) -> bool:
-        cmd = [sys.executable, "-m", "pip", "install", "--quiet", package]
-        return subprocess.call(cmd) == 0
+        cmd = [sys.executable, "-m", "pip", "install", package]
+        try:
+            with Progress(
+                SpinnerColumn(),
+                TextColumn(f"[cyan]Installing {package}...[/cyan]"),
+                transient=True,
+                console=console,
+            ) as progress:
+                task = progress.add_task("pip_install", start=False)
+                # Start subprocess without clutter on console:
+                progress.start_task(task)
+                result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                if result.returncode != 0:
+                    console.print(f"[red]Failed to install {package}.[/red]")
+                    console.print(f"[red]{result.stderr.strip()}[/red]")
+                return result.returncode == 0
+        except Exception as e:
+            console.print(f"[red]Exception during pip install: {e}[/red]")
+            return False
 
+    # 3. Try install tensorflow or tf_nightly
     if not _pip_install("tensorflow") and not _pip_install("tf_nightly"):
-        sys.stderr.write("cannot install tensorflow\n")
+        console.print("[red]Cannot install TensorFlow via pip.[/red]")
         sys.exit(1)
 
-    # --- 4. Relaunch the original script -----------------------------------
+    # 4. Relaunch current script with original args
+    console.print("[green]TensorFlow installed successfully! Restarting script...[/green]")
     os.execv(sys.executable, [sys.executable] + sys.argv)
 
-    # os.execv never returns, but keep linters & type‑checkers happy:
     raise RuntimeError("os.execv failed unexpectedly")
 
 @beartype
