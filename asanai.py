@@ -247,7 +247,7 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
         console.print(f"[yellow]⚠ Conversion not possible:[/] '{original_tfjs_model_json}' not found.")
         return False
 
-    console.print(f"[cyan]ℹ Conversion needed:[/] '{keras_h5_file}' does not exist, but '{original_tfjs_model_json}' found.")
+    console.print(f"[cyan]Conversion needed:[/] '{keras_h5_file}' does not exist, but '{original_tfjs_model_json}' found.")
 
     # Helper function to check if a command exists in PATH
 
