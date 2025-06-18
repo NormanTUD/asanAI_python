@@ -4,7 +4,7 @@ if ! [[ -d env ]]; then
 	python3 -mvenv env
 	source env/bin/activate
 
-	pip install pylint pyflakes
+	pip install pylint pyflakes mypy
 
 	pip install -r requirements.txt
 fi
@@ -22,6 +22,13 @@ echo "===> pyflakes ===>"
 
 if ! pyflakes asanai.py; then
 	echo "pyflakes asanai.py failed. Exiting"
+	exit 2
+fi
+
+echo "===> mypy ===>"
+
+if ! mypy asanai.py; then
+	echo "mypy asanai.py failed. Exiting"
 	exit 2
 fi
 
