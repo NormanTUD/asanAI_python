@@ -4,7 +4,6 @@ from skimage import transform
 from PIL import Image
 from pathlib import Path
 import re
-import argparse
 from rich.console import Console
 from rich.progress import SpinnerColumn, Progress, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn
 from rich.text import Text
