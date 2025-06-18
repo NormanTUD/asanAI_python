@@ -11,11 +11,14 @@ fi
 
 source env/bin/activate
 
+echo "===> pylint ===>"
+
 if ! pylint asanai.py; then
 	echo "pylint asanai.py failed. Exiting."
 	exit 1
 fi
 
+echo "===> pyflakes ===>"
 
 if ! pyflakes asanai.py; then
 	echo "pyflakes asanai.py failed. Exiting"

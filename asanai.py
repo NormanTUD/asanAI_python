@@ -25,7 +25,6 @@ console = Console()
 
 @beartype
 def _newest_match(directory: Union[Path, str], pattern: str) -> Path | None:
-    """Return the newest Path in *directory* matching *pattern* or None."""
     candidates = [
         p for p in directory.iterdir()
         if re.fullmatch(pattern, p.name)
