@@ -5,9 +5,10 @@ import os
 from pathlib import Path
 import tempfile
 import subprocess
-from typing import Optional, Union, Any
+from typing import Optional, Union, Any, Iterator
 import shutil
 from importlib import import_module
+from contextlib import contextmanager
 
 from types import ModuleType
 import numpy as np
@@ -193,6 +194,55 @@ def _pip_install_tensorflowjs_converter_and_run_it(conversion_args: list) -> boo
 
     return False
 
+@contextmanager
+def temporarily_move_weights(weights_path: str | Path) -> Iterator[Optional[Path]]:
+    """
+    Temporarily relocates an existing ``model.weights.bin`` so you can
+    recreate or overwrite the file safely.  The original file is restored
+    when the context exits.
+
+    Parameters
+    ----------
+    weights_path : str | pathlib.Path
+        Path to the *current* weight file (may already contain “(5)” etc.).
+
+    Yields
+    ------
+    pathlib.Path | None
+        The path of the temporary file if a move happened, otherwise ``None``.
+
+    Raises
+    ------
+    FileExistsError
+        If the context block creates a *new* file with the same name and thus
+        prevents the original file from being restored.
+    """
+    original = Path(weights_path)
+    parked: Optional[Path] = None
+
+    # -- Enter ---------------------------------------------------------------
+    if original.exists():
+        idx = 0
+        while True:
+            candidate = original.with_suffix(original.suffix + f".{idx}")
+            if not candidate.exists():
+                parked = candidate
+                break
+            idx += 1
+        original.rename(parked)  # in‑place move
+
+    try:
+        yield parked  # let caller know where it is (or None)
+    finally:
+        # -- Exit: try to restore -------------------------------------------
+        if parked is not None:
+            if original.exists():
+                raise FileExistsError(
+                    f"Cannot restore {original}: a file with that name was "
+                    "created inside the context block."
+                )
+            parked.rename(original)
+
 @beartype
 def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> bool:
     keras_h5_file = 'model.h5'
@@ -225,23 +275,24 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
         keras_h5_file
     ]
 
-    if _pip_install_tensorflowjs_converter_and_run_it(conversion_args):
-        return True
+    with temporarily_move_weights(weights_bin):
+        if _pip_install_tensorflowjs_converter_and_run_it(conversion_args):
+            return True
 
-    if not _is_command_available('docker'):
-        console.print("[red]✘ Docker is not installed or not found in PATH. Cannot perform fallback conversion. Please install docker.[/]")
-        return False
+        if not _is_command_available('docker'):
+            console.print("[red]✘ Docker is not installed or not found in PATH. Cannot perform fallback conversion. Please install docker.[/]")
+            return False
 
-    try:
-        subprocess.run(['docker', 'info'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    except subprocess.CalledProcessError:
-        console.print("[red]✘ Docker daemon not running or inaccessible. Cannot perform fallback conversion.[/]")
-        return False
+        try:
+            subprocess.run(['docker', 'info'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError:
+            console.print("[red]✘ Docker daemon not running or inaccessible. Cannot perform fallback conversion.[/]")
+            return False
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        dockerfile_path = os.path.join(tmpdir, 'Dockerfile')
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dockerfile_path = os.path.join(tmpdir, 'Dockerfile')
 
-        dockerfile_content = '''FROM python:3.10-slim
+            dockerfile_content = '''FROM python:3.10-slim
 
 RUN apt-get update && \\
     apt-get install -y --no-install-recommends build-essential curl && \\
@@ -259,55 +310,55 @@ WORKDIR /app
 
 CMD ["/bin/bash"]
 '''
-        with open(dockerfile_path, mode='w', encoding="utf-8") as f:
-            f.write(dockerfile_content)
+            with open(dockerfile_path, mode='w', encoding="utf-8") as f:
+                f.write(dockerfile_content)
 
-        image_name = 'tfjs_converter_py310_dynamic'
+            image_name = 'tfjs_converter_py310_dynamic'
 
-        console.print("[cyan]Building Docker image for fallback conversion...[/]")
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            transient=True,
-            console=console
-        ) as progress:
-            build_task = progress.add_task("Building Docker image...", total=None)
-            try:
-                build_cmd = ['docker', 'build', '-t', image_name, '-f', dockerfile_path, tmpdir]
-                subprocess.run(build_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                progress.update(build_task, description="Docker image built successfully.")
-            except subprocess.CalledProcessError as e:
-                progress.stop()
-                console.print("[red]✘ Docker build failed with error:[/]")
-                console.print(Text(e.stderr.strip(), style="bold red"))
-                return False
-            except KeyboardInterrupt:
-                progress.stop()
-                console.print("[red]✘ Docker build was cancelled by CTRL-C[/]")
-                sys.exit(0)
+            console.print("[cyan]Building Docker image for fallback conversion...[/]")
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                transient=True,
+                console=console
+            ) as progress:
+                build_task = progress.add_task("Building Docker image...", total=None)
+                try:
+                    build_cmd = ['docker', 'build', '-t', image_name, '-f', dockerfile_path, tmpdir]
+                    subprocess.run(build_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    progress.update(build_task, description="Docker image built successfully.")
+                except subprocess.CalledProcessError as e:
+                    progress.stop()
+                    console.print("[red]✘ Docker build failed with error:[/]")
+                    console.print(Text(e.stderr.strip(), style="bold red"))
+                    return False
+                except KeyboardInterrupt:
+                    progress.stop()
+                    console.print("[red]✘ Docker build was cancelled by CTRL-C[/]")
+                    sys.exit(0)
 
-        run_cmd = [
-            'docker', 'run', '--rm',
-            '-v', f"{os.path.abspath(os.getcwd())}:/app",
-            image_name,
-            'tensorflowjs_converter',
-        ] + conversion_args
+            run_cmd = [
+                'docker', 'run', '--rm',
+                '-v', f"{os.path.abspath(os.getcwd())}:/app",
+                image_name,
+                'tensorflowjs_converter',
+            ] + conversion_args
 
-        with console.status("[bold green]Running conversion inside Docker container..."):
-            try:
-                run_process = subprocess.run(run_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                console.print("[green]✔ Conversion inside Docker container succeeded.[/]")
-                console.print(Text(run_process.stdout.strip(), style="dim"))
-            except subprocess.CalledProcessError as e:
-                console.print("[red]✘ Conversion inside Docker container failed with error:[/]")
-                console.print(Text(e.stderr.strip(), style="bold red"))
-                return False
-            except KeyboardInterrupt:
-                console.print("[red]✘ Docker build was cancelled by CTRL-C[/]")
-                sys.exit(0)
+            with console.status("[bold green]Running conversion inside Docker container..."):
+                try:
+                    run_process = subprocess.run(run_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    console.print("[green]✔ Conversion inside Docker container succeeded.[/]")
+                    console.print(Text(run_process.stdout.strip(), style="dim"))
+                except subprocess.CalledProcessError as e:
+                    console.print("[red]✘ Conversion inside Docker container failed with error:[/]")
+                    console.print(Text(e.stderr.strip(), style="bold red"))
+                    return False
+                except KeyboardInterrupt:
+                    console.print("[red]✘ Docker build was cancelled by CTRL-C[/]")
+                    sys.exit(0)
 
-    return True
+        return True
 
 @beartype
 def load(filename: Union[Path, str], height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> Optional[np.ndarray]:
