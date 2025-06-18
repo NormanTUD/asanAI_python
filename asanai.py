@@ -48,6 +48,7 @@ def rename_model_files_if_needed(directory: Optional[Union[Path, str]]) -> None:
         TaskProgressColumn(),
         TimeElapsedColumn(),
         console=console,
+        transient=True
     ) as progress:
         task_ids = {
             canonical: progress.add_task(f"Checking {canonical}", total=1)
