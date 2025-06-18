@@ -300,6 +300,9 @@ CMD ["/bin/bash"]
                 console.print("[red]✘ Conversion inside Docker container failed with error:[/]")
                 console.print(Text(e.stderr.strip(), style="bold red"))
                 return False
+            except KeyboardInterrupt:
+                console.print("[red]✘ Docker build was cancelled by CTRL-C[/]")
+                sys.exit(0)
 
     return True
 
