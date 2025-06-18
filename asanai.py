@@ -111,10 +111,10 @@ def _newest_match(directory: Union[Path, str], pattern: str) -> Optional[Path]:
     return candidates[0]
 
 @beartype
-def rename_model_files_if_needed(directory: Optional[Union[Path, str]] = ".") -> None:
+def find_model_files(directory: Optional[Union[Path, str]] = ".") -> dict[str, Optional[Path]]:
     if directory is None:
         console.log("[red]No directory provided[/red]")
-        return
+        return {}
 
     directory = Path(directory)
 
@@ -122,6 +122,8 @@ def rename_model_files_if_needed(directory: Optional[Union[Path, str]] = ".") ->
         ("model.json",        r"model\((\d+)\)\.json"),
         ("model.weights.bin", r"model\.weights\((\d+)\)\.bin"),
     )
+
+    found_files: dict[str, Optional[Path]] = {}
 
     with Progress(
         TextColumn("[bold]{task.description}"),
@@ -141,27 +143,37 @@ def rename_model_files_if_needed(directory: Optional[Union[Path, str]] = ".") ->
             target = directory / canonical
             if target.exists():
                 progress.update(task_ids[canonical], completed=1)
-                console.log(f"[green]{canonical} already present[/green]")
+                console.log(f"[green]{canonical} found[/green]")
+                found_files[canonical] = target
                 continue
 
             newest = _newest_match(directory, regex)
             if newest:
-                newest.rename(target)
-                console.log(f"[green]Renamed[/green] {newest.name} → {canonical}")
+                console.log(f"[yellow]Using[/yellow] {newest.name} instead of {canonical}")
+                found_files[canonical] = newest
             else:
-                console.log(f"[yellow]Warning:[/yellow] No candidate for {canonical}")
+                console.log(f"[red]Missing:[/red] No match for {canonical}")
+                found_files[canonical] = None
             progress.update(task_ids[canonical], completed=1)
+
+    return found_files
 
 @beartype
 def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> bool:
-    rename_model_files_if_needed(directory)
     keras_h5_file = 'model.h5'
-    tfjs_model_json = 'model.json'
 
-    # Check if conversion is needed
     if os.path.exists(keras_h5_file):
         console.print(f"[green]✔ Conversion not needed:[/] '{keras_h5_file}' already exists.")
         return True
+
+    files = find_model_files(directory)
+
+    tfjs_model_json = files.get("model.json")
+    weights_bin = files.get("model.weights.bin")
+
+    if not model_json or not weights_bin:
+        console.log("[red]Missing model files. Conversion aborted.[/red]")
+        return False
 
     if not os.path.exists(tfjs_model_json):
         console.print(f"[yellow]⚠ Conversion not possible:[/] '{tfjs_model_json}' not found.")
