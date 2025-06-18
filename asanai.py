@@ -379,7 +379,6 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
             formatted = [f"{v:.{precision}f}" for v in values]
             if len(set(formatted)) == len(values):
                 return formatted
-        # Notfall: volle Genauigkeit
         return [f"{v:.10f}" for v in values]
 
     if len(labels) != len(probs):
