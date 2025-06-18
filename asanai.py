@@ -60,7 +60,6 @@ def install_tensorflow() -> Optional[ModuleType]:
     try:
         console.rule("[bold cyan]Checking for TensorFlow...")
 
-        # 1. Try import first, suppressing TF clutter logs here too
         try:
             tf = import_module("tensorflow")
             return tf
