@@ -21,6 +21,8 @@ from rich.progress import SpinnerColumn, Progress, TextColumn, BarColumn, TaskPr
 from rich.text import Text
 from beartype import beartype
 
+init()
+
 def dier (msg: Any) -> None:
     pprint(msg)
     sys.exit(1)
