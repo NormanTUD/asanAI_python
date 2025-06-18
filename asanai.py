@@ -1,25 +1,30 @@
 import sys
-from pprint import pprint
-import re
-import os
-from pathlib import Path
-import tempfile
-import subprocess
-from typing import Optional, Union, Any, Tuple
-import shutil
-from importlib import import_module
-import json
-from types import ModuleType
 
-from colorama import init, Style
-import numpy as np
-import cv2
-from skimage import transform
-from PIL import Image, UnidentifiedImageError
-from rich.console import Console
-from rich.progress import SpinnerColumn, Progress, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn
-from rich.text import Text
-from beartype import beartype
+try:
+    from pprint import pprint
+    import re
+    import os
+    from pathlib import Path
+    import tempfile
+    import subprocess
+    from typing import Optional, Union, Any, Tuple
+    import shutil
+    from importlib import import_module
+    import json
+    from types import ModuleType
+
+    from colorama import init, Style
+    import numpy as np
+    import cv2
+    from skimage import transform
+    from PIL import Image, UnidentifiedImageError
+    from rich.console import Console
+    from rich.progress import SpinnerColumn, Progress, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn
+    from rich.text import Text
+    from beartype import beartype
+except ModuleNotFoundError as e:
+    print(f"Failed ot load module: {e}")
+    sys.exit(1)
 
 init()
 
