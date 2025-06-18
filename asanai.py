@@ -13,7 +13,7 @@ from types import ModuleType
 import numpy as np
 import cv2
 from skimage import transform
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from rich.console import Console
 from rich.progress import SpinnerColumn, Progress, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn
 from rich.text import Text
@@ -279,20 +279,62 @@ CMD ["/bin/bash"]
     return True
 
 @beartype
-def load(filename: Union[Path, str], height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> np.ndarray:
-    image = Image.open(filename)
-    np_image: np.ndarray = np.array(image).astype('float32') / divide_by
-    np_image = transform.resize(np_image, (height, width, 3))
-    np_image = np.expand_dims(np_image, axis=0)
-    return np_image
+def load(filename: Union[Path, str], height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> Optional[np.ndarray]:
+    if not os.path.exists(filename):
+        console.print(f"[red]Error: The path '{filename}' could not be found![/red]")
+        return None
+
+    try:
+        image = Image.open(filename)
+        np_image: np.ndarray = np.array(image).astype('float32') / divide_by
+        np_image = transform.resize(np_image, (height, width, 3))
+        np_image = np.expand_dims(np_image, axis=0)
+        return np_image
+
+    except PermissionError:
+        console.print(f"[red]Error: Permission denied for file '{filename}'. Please check file permissions.[/red]")
+        return None
+
+    except UnidentifiedImageError:
+        console.print(f"[red]Error: The file '{filename}' is not a valid image or is corrupted.[/red]")
+        return None
+
+    except ValueError as ve:
+        console.print(f"[red]Error: ValueError encountered: {ve}. Possibly wrong image dimensions or resize parameters.[/red]")
+        return None
+
+    except TypeError as te:
+        console.print(f"[red]Error: TypeError encountered: {te}. Check if 'divide_by' is a number (int or float).[/red]")
+        return None
+
+    except OSError as ose:
+        console.print(f"[red]Error: OS error occurred: {ose}. Possible file system issue.[/red]")
+        return None
 
 @beartype
-def load_frame(frame: np.ndarray, height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> np.ndarray:
-    np_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # pylint: disable=no-member
-    np_image = np.array(np_image).astype('float32') / divide_by
-    np_image = transform.resize(np_image, (height, width, 3))
-    np_image = np.expand_dims(np_image, axis=0)
-    return np_image
+def load_frame(frame: np.ndarray, height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> Optional[np.ndarray]:
+    try:
+        np_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # pylint: disable=no-member  
+        np_image = np.array(np_image).astype('float32') / divide_by
+        np_image = transform.resize(np_image, (height, width, 3))
+        np_image = np.expand_dims(np_image, axis=0)
+        return np_image
+
+    except cv2.error as e:
+        console.print(f"[red]OpenCV error during color conversion: {e}[/red]")
+        return None
+
+    except ValueError as ve:
+        console.print(f"[red]ValueError during resize or processing: {ve}[/red]")
+        return None
+
+    except TypeError as te:
+        console.print(f"[red]TypeError encountered: {te}. Check input types.[/red]")
+        return None
+
+    except OSError as ose:
+        console.print(f"[red]OS error occurred: {ose}.[/red]")
+        return None
 
 @beartype
 def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]) -> np.ndarray:
