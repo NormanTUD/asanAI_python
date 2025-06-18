@@ -10,6 +10,7 @@ import shutil
 from importlib import import_module
 import json
 
+from colorama import init, Style
 from types import ModuleType
 import numpy as np
 import cv2
@@ -29,11 +30,17 @@ console = Console()
 @beartype
 def print_predictions_line(predictions: np.ndarray, labels: list) -> None:
     vals = predictions[0]
+    max_index = int(np.argmax(vals))  # Index des höchsten Werts
 
-    parts = [f"{label}: {value:.10f}" for label, value in zip(labels, vals)]
+    parts = []
+    for i, (label, value) in enumerate(zip(labels, vals)):
+        if i == max_index:
+            part = f"{Style.BRIGHT}{label}: {value:.10f}{Style.RESET_ALL}"
+        else:
+            part = f"{label}: {value:.10f}"
+        parts.append(part)
 
     line = "  ".join(parts)
-
     sys.stdout.write("\r" + line + " " * 5)
     sys.stdout.flush()
 
