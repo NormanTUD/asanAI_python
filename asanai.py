@@ -7,7 +7,9 @@ import tempfile
 import subprocess
 from typing import Optional, Union, Any
 import shutil
+from importlib import import_module
 
+from types import ModuleType
 import numpy as np
 import cv2
 from skimage import transform
@@ -22,6 +24,47 @@ def dier (msg: Any) -> None:
     sys.exit(1)
 
 console = Console()
+
+@beartype
+def install_tensorflow() -> ModuleType:        # returns the tf module (if already installed)
+    """
+    Guarantee that ``tensorflow`` can be imported.
+
+    1. Try to ``import tensorflow``.
+    2. If missing and *not* inside a virtual‑env → abort with an explanatory error.
+    3. If inside a venv, run ``pip install tensorflow``; on failure try ``pip install tf_nightly``.
+    4. After a successful install, re‑exec the current interpreter with the
+       *identical* argument vector so the caller's script restarts cleanly.
+
+    On success *without* needing a reinstall the loaded TensorFlow module is
+    returned.  When an install was required the function never returns
+    because the process image is replaced via ``os.execv``.
+    """
+    # --- 1. Fast‑path: TensorFlow already present ---------------------------
+    try:
+        return import_module("tensorflow")
+    except ModuleNotFoundError:
+        pass
+
+    # --- 2. Ensure we are in a virtual‑env ----------------------------------
+    if sys.prefix == sys.base_prefix:   # typical venv detection
+        sys.stderr.write("Error: you need to be in a virtual environment\n")
+        sys.exit(1)
+
+    # --- 3. Attempt installation(s) ----------------------------------------
+    def _pip_install(package: str) -> bool:
+        cmd = [sys.executable, "-m", "pip", "install", "--quiet", package]
+        return subprocess.call(cmd) == 0
+
+    if not _pip_install("tensorflow") and not _pip_install("tf_nightly"):
+        sys.stderr.write("cannot install tensorflow\n")
+        sys.exit(1)
+
+    # --- 4. Relaunch the original script -----------------------------------
+    os.execv(sys.executable, [sys.executable] + sys.argv)
+
+    # os.execv never returns, but keep linters & type‑checkers happy:
+    raise RuntimeError("os.execv failed unexpectedly")
 
 @beartype
 def _newest_match(directory: Union[Path, str], pattern: str) -> Optional[Path]:
