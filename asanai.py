@@ -164,7 +164,7 @@ def _is_command_available(cmd: str) -> bool:
 
 @beartype
 def _pip_install_tensorflowjs_converter_and_run_it(conversion_args: list) -> bool:
-    if _pip_install("tensorflowjs"):
+    if _pip_install("tensorflowjs") or _is_command_available('tensorflowjs_converter'):
         if _is_command_available('tensorflowjs_converter'):
             with console.status("[bold green]Local tensorflowjs_converter found. Starting conversion..."):
                 cmd = ['tensorflowjs_converter'] + conversion_args
