@@ -17,6 +17,6 @@ pyflakes asanai.py
 
 #bandit asanai.py
 
-deadcode .
+deadcode asanai.py
 
 #flake8 asanai.py
