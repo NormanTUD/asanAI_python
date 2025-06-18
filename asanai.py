@@ -5,6 +5,12 @@ from rich.console import Console
 from rich.progress import Progress, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn
 from beartype import beartype
 from typing import Optional, Union
+import sys
+from pprint import pprint
+
+def dier (msg):
+    pprint(msg)
+    sys.exit(1)
 
 console = Console()
 
@@ -23,7 +29,6 @@ def _newest_match(directory: Union[Path, str], pattern: str) -> Path | None:
         reverse=True,
     )
     return candidates[0]
-
 
 @beartype
 def rename_model_files_if_needed(directory: Optional[Union[Path, str]]) -> None:
