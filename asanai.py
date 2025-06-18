@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import tempfile
 import subprocess
-from typing import Optional, Union
+from typing import Optional, Union, Any
 import shutil
 
 import numpy as np
@@ -17,7 +17,7 @@ from rich.progress import SpinnerColumn, Progress, TextColumn, BarColumn, TaskPr
 from rich.text import Text
 from beartype import beartype
 
-def dier (msg):
+def dier (msg: Any) -> None:
     pprint(msg)
     sys.exit(1)
 
