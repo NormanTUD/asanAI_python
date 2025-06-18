@@ -280,6 +280,12 @@ CMD ["/bin/bash"]
                 console.print("[red]✘ Docker build failed with error:[/]")
                 console.print(Text(e.stderr.strip(), style="bold red"))
                 return False
+            except KeyboardInterrupt:
+                progress.stop()
+                console.print("[red]✘ Docker build was cancelled:[/]")
+                console.print(Text(e.stderr.strip(), style="bold red"))
+                return False
+
 
         run_cmd = [
             'docker', 'run', '--rm',
