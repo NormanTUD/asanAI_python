@@ -77,6 +77,9 @@ def install_tensorflow() -> Optional[ModuleType]:
     if not _pip_install("tensorflow") and not _pip_install("tf_nightly"):
         console.print("[red]Cannot install TensorFlow via pip.[/red]")
 
+        _pip_install("keras")
+        _pip_install("tf_keras")
+
     # 4. Tell user to restart the script
     console.print("[green]TensorFlow installed successfully! Run the script again, it should work now.[/green]")
 
