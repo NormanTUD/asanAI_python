@@ -158,9 +158,14 @@ def find_model_files(directory: Optional[Union[Path, str]] = ".") -> dict[str, O
 
     return found_files
 
+@beartype
+def _is_command_available(cmd: str) -> bool:
+    return shutil.which(cmd) is not None
+
+@beartype
 def _pip_install_tensorflowjs_converter_and_run_it(conversion_args: list) -> bool:
     if _pip_install("tensorflowjs"):
-        if is_command_available('tensorflowjs_converter'):
+        if _is_command_available('tensorflowjs_converter'):
             with console.status("[bold green]Local tensorflowjs_converter found. Starting conversion..."):
                 cmd = ['tensorflowjs_converter'] + conversion_args
                 try:
@@ -209,8 +214,6 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
     console.print(f"[cyan]ℹ Conversion needed:[/] '{keras_h5_file}' does not exist, but '{tfjs_model_json}' found.")
 
     # Helper function to check if a command exists in PATH
-    def is_command_available(cmd: str) -> bool:
-        return shutil.which(cmd) is not None
 
     conversion_args = [
         '--input_format=tfjs_layers_model',
@@ -219,11 +222,11 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
         keras_h5_file
     ]
 
-    if not is_command_available('tensorflowjs_converter'):
+    if not _is_command_available('tensorflowjs_converter'):
         if _pip_install_tensorflowjs_converter_and_run_it(conversion_args):
             return True
 
-    if not is_command_available('docker'):
+    if not _is_command_available('docker'):
         console.print("[red]✘ Docker is not installed or not found in PATH. Cannot perform fallback conversion. Please install docker.[/]")
         return False
 
