@@ -80,8 +80,7 @@ def install_tensorflow() -> Optional[ModuleType]:
     # 4. Tell user to restart the script
     console.print("[green]TensorFlow installed successfully! Run the script again, it should work now.[/green]")
 
-    return None
-
+    sys.exit(0)
 
 @beartype
 def _newest_match(directory: Union[Path, str], pattern: str) -> Optional[Path]:
