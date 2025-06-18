@@ -56,9 +56,13 @@ def _pip_install(package: str) -> bool:
     return False
 
 @beartype
+def rule(msg) -> None:
+    console.rule(f"{msg}")
+ 
+@beartype
 def install_tensorflow() -> Optional[ModuleType]:
     try:
-        console.rule("[bold cyan]Checking for TensorFlow...")
+        rule("[bold cyan]Checking for TensorFlow...")
 
         try:
             tf = import_module("tensorflow")
@@ -216,6 +220,8 @@ def copy_and_patch_tfjs(model_json_path: str, weights_bin_path: str, out_prefix:
 
 @beartype
 def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> bool:
+    rule("Trying to see if if it is neccessary to convert TFJS models to Keras")
+
     keras_h5_file = 'model.h5'
 
     if os.path.exists(keras_h5_file):
