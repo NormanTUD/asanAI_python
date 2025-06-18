@@ -279,7 +279,7 @@ CMD ["/bin/bash"]
     return True
 
 @beartype
-def load(filename: Union[Path, str], width: int = 224, height: int = 224, divideby: float = 255.0) -> np.ndarray:
+def load(filename: Union[Path, str], height: int = 224, width: int = 224, divideby: float = 255.0) -> np.ndarray:
     image = Image.open(filename)
     np_image: np.ndarray = np.array(image).astype('float32') / divideby
     np_image = transform.resize(np_image, (height, width, 3))
@@ -287,7 +287,7 @@ def load(filename: Union[Path, str], width: int = 224, height: int = 224, divide
     return np_image
 
 @beartype
-def load_frame(frame: np.ndarray, width: int = 224, height: int = 224, divideby: float = 255.0) -> np.ndarray:
+def load_frame(frame: np.ndarray, height: int = 224, width: int = 224, divideby: float = 255.0) -> np.ndarray:
     np_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # pylint: disable=no-member
     np_image = np.array(np_image).astype('float32') / divideby
     np_image = transform.resize(np_image, (height, width, 3))
