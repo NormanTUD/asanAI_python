@@ -27,7 +27,7 @@ def dier (msg: Any) -> None:
 console = Console()
 
 @beartype
-def print_predictions_line(predictions: numpy.ndarray, labels: list) -> None:
+def print_predictions_line(predictions: np.ndarray, labels: list) -> None:
     vals = predictions[0]
 
     parts = [f"{label}: {value:.10f}" for label, value in zip(labels, vals)]
