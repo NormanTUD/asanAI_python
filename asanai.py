@@ -203,7 +203,7 @@ CMD ["/bin/bash"]
     return True
 
 @beartype
-def load(filename: Union[path, str], width: int = 224, height: int = 224, divideby: float = 255) -> np.ndarray:
+def load(filename: Union[Path, str], width: int = 224, height: int = 224, divideby: float = 255) -> np.ndarray:
     np_image = Image.open(filename)
     np_image = np.array(np_image).astype('float32')/divideby
     np_image = transform.resize(np_image, (height, width, 3))
