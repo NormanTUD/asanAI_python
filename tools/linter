@@ -27,7 +27,7 @@ fi
 
 echo "===> mypy ===>"
 
-if ! mypy --install-types asanai.py; then
+if ! yes | mypy --install-types asanai.py; then
 	echo "mypy --install-types asanai.py failed. Exiting"
 	exit 2
 fi
