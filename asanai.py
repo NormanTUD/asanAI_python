@@ -11,6 +11,7 @@ from pprint import pprint
 import shutil
 import subprocess
 import tempfile
+import os
 
 def dier (msg):
     pprint(msg)
