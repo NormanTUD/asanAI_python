@@ -288,17 +288,16 @@ def load(filename: Union[Path, str], height: int = 224, width: int = 224, divide
         with console.status(f"Loading image {filename}"):
             image = Image.open(filename)
 
-        with console.status("Converting image to numpy array and normalizing"):
+        with console.status(f"Converting image {filename} to numpy array and normalizing"):
             np_image: np.ndarray = np.array(image).astype('float32') / divide_by
 
-        with console.status(f"Resizing image to ({height}, {width}, 3)"):
+        with console.status(f"Resizing image {filename} to ({height}, {width}, 3)"):
             np_image = transform.resize(np_image, (height, width, 3))
 
-        with console.status("Expanding numpy array dimensions"):
+        with console.status(f"Expanding numpy array dimensions from image {filename}"):
             np_image = np.expand_dims(np_image, axis=0)
 
-        with console.status("Returning processed numpy image"):
-            return np_image
+        return np_image
 
     except PermissionError:
         console.print(f"[red]Error: Permission denied for file '{filename}'. Please check file permissions.[/red]")
