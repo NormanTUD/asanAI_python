@@ -87,8 +87,6 @@ def install_tensorflow() -> ModuleType:
             console.print(f"[red]pip install failed: {e}[/red]")
         except FileNotFoundError as e:
             console.print(f"[red]pip command not found: {e}[/red]")
-        except Exception as e:  # optionally keep this last catch for unexpected errors
-            console.print(f"[red]Unexpected error during pip install: {e}[/red]")
 
         return False
 
