@@ -314,13 +314,13 @@ def load(filename: Union[Path, str], height: int = 224, width: int = 224, divide
 @beartype
 def load_frame(frame: np.ndarray, height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> Optional[np.ndarray]:
     try:
-        np_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # pylint: disable=no-member  
+        np_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # pylint: disable=no-member
         np_image = np.array(np_image).astype('float32') / divide_by
         np_image = transform.resize(np_image, (height, width, 3))
         np_image = np.expand_dims(np_image, axis=0)
         return np_image
 
-    except cv2.error as e:
+    except cv2.error as e: # pylint: disable=no-member
         console.print(f"[red]OpenCV error during color conversion: {e}[/red]")
         return None
 
