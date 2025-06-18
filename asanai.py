@@ -158,6 +158,33 @@ def find_model_files(directory: Optional[Union[Path, str]] = ".") -> dict[str, O
 
     return found_files
 
+def _pip_install_tensorflowjs_converter_and_run_it(conversion_args: list) -> bool:
+    if _pip_install("tensorflowjs"):
+        if is_command_available('tensorflowjs_converter'):
+            with console.status("[bold green]Local tensorflowjs_converter found. Starting conversion..."):
+                cmd = ['tensorflowjs_converter'] + conversion_args
+                try:
+                    completed_process = subprocess.run(
+                        cmd,
+                        check=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True
+                    )
+                    console.print("[green]✔ Local conversion succeeded.[/]")
+                    console.print(Text(completed_process.stdout.strip(), style="dim"))
+                    return True
+                except subprocess.CalledProcessError as e:
+                    console.print("[red]✘ Local conversion failed:[/]")
+                    console.print(Text(e.stderr.strip(), style="bold red"))
+                    console.print("[yellow]➜ Falling back to Docker-based conversion...[/]")
+        else:
+            console.print("[yellow]⚠ tensorflowjs_converter CLI not found locally.[/]")
+    else:
+        console.print("[yellow]⚠ Installing tensorflowjs module failed. Trying to fall back to docker.[/]")
+
+    return False
+
 @beartype
 def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> bool:
     keras_h5_file = 'model.h5'
@@ -193,30 +220,8 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
     ]
 
     if not is_command_available('tensorflowjs_converter'):
-        if _pip_install("tensorflowjs"):
-
-            if is_command_available('tensorflowjs_converter'):
-                with console.status("[bold green]Local tensorflowjs_converter found. Starting conversion..."):
-                    cmd = ['tensorflowjs_converter'] + conversion_args
-                    try:
-                        completed_process = subprocess.run(
-                            cmd,
-                            check=True,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            text=True
-                        )
-                        console.print("[green]✔ Local conversion succeeded.[/]")
-                        console.print(Text(completed_process.stdout.strip(), style="dim"))
-                        return True
-                    except subprocess.CalledProcessError as e:
-                        console.print("[red]✘ Local conversion failed:[/]")
-                        console.print(Text(e.stderr.strip(), style="bold red"))
-                        console.print("[yellow]➜ Falling back to Docker-based conversion...[/]")
-            else:
-                console.print("[yellow]⚠ tensorflowjs_converter CLI not found locally.[/]")
-        else:
-            console.print("[yellow]⚠ Installing tensorflowjs module failed. Trying to fall back to docker.[/]")
+        if _pip_install_tensorflowjs_converter_and_run_it(conversion_args):
+            return True
 
     if not is_command_available('docker'):
         console.print("[red]✘ Docker is not installed or not found in PATH. Cannot perform fallback conversion. Please install docker.[/]")
