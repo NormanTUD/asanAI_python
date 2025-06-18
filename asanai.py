@@ -62,7 +62,7 @@ def rule(msg) -> None:
 @beartype
 def install_tensorflow() -> Optional[ModuleType]:
     try:
-        rule("[bold cyan]Checking for TensorFlow...")
+        rule("[bold cyan]Checking for TensorFlow...[/]")
 
         try:
             tf = import_module("tensorflow")
@@ -220,7 +220,7 @@ def copy_and_patch_tfjs(model_json_path: str, weights_bin_path: str, out_prefix:
 
 @beartype
 def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> bool:
-    rule("Trying to see if if it is neccessary to convert TFJS models to Keras")
+    rule("[bold cyan]Trying to see if if it is neccessary to convert TFJS models to Keras[/]")
 
     keras_h5_file = 'model.h5'
 
@@ -344,7 +344,7 @@ CMD ["/bin/bash"]
 
 @beartype
 def load(filename: Union[Path, str], height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> Optional[np.ndarray]:
-    rule(f"Loading image {filename}")
+    rule(f"[bold cyan]Loading image {filename}[/]")
     try:
         if not os.path.exists(filename):
             console.print(f"[red]Error: The path '{filename}' could not be found![/red]")
