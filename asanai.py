@@ -24,15 +24,25 @@ def dier (msg: Any) -> None:
 console = Console()
 
 @beartype
-def _newest_match(directory: Union[Path, str], pattern: str) -> Path | None:
+def _newest_match(directory: Union[Path, str], pattern: str) -> Optional[Path]:
+    directory = Path(directory)
+
     candidates = [
         p for p in directory.iterdir()
         if re.fullmatch(pattern, p.name)
     ]
+
     if not candidates:
         return None
+
+    def extract_number(p: Path) -> int:
+        match = re.search(r"\((\d+)\)", p.name)
+        if not match:
+            raise ValueError(f"No number found in parentheses in: {p.name}")
+        return int(match.group(1))
+
     candidates.sort(
-        key=lambda p: int(re.search(r"\((\d+)\)", p.name).group(1)),
+        key=extract_number,
         reverse=True,
     )
     return candidates[0]
