@@ -183,6 +183,9 @@ def _pip_install_tensorflowjs_converter_and_run_it(conversion_args: list) -> boo
                     console.print("[red]✘ Local conversion failed:[/]")
                     console.print(Text(e.stderr.strip(), style="bold red"))
                     console.print("[yellow]➜ Falling back to Docker-based conversion...[/]")
+                except KeyboardInterrupt:
+                    console.print("[green]You cancelled the conversion progress by CTRL-C. You need to run this script again or do it manually for this program to work.[/green]")
+                    sys.exit(0)
         else:
             console.print("[yellow]⚠ tensorflowjs_converter CLI not found locally.[/]")
     else:
