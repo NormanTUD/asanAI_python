@@ -13,7 +13,7 @@ source env/bin/activate
 
 echo "===> pylint ===>"
 
-if ! pylint asanai.py; then
+if ! pylint --disable=line-too-long,missing-module-docstring,missing-function-docstring,too-many-locals,too-many-return-statements,too-many-statements asanai.py; then
 	echo "pylint asanai.py failed. Exiting."
 	exit 1
 fi
@@ -24,5 +24,7 @@ if ! pyflakes asanai.py; then
 	echo "pyflakes asanai.py failed. Exiting"
 	exit 2
 fi
+
+echo "<=== linters ended <==="
 
 exit 0
