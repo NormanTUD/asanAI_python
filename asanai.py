@@ -1,20 +1,21 @@
+import sys
+from pprint import pprint
+import re
+import os
+from pathlib import Path
+import tempfile
+import subprocess
+from typing import Optional, Union
+import shutil
+
 import numpy as np
 import cv2
 from skimage import transform
 from PIL import Image
-from pathlib import Path
-import re
 from rich.console import Console
 from rich.progress import SpinnerColumn, Progress, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn
 from rich.text import Text
 from beartype import beartype
-from typing import Optional, Union
-import sys
-from pprint import pprint
-import shutil
-import subprocess
-import tempfile
-import os
 
 def dier (msg):
     pprint(msg)
@@ -117,7 +118,7 @@ def convert_to_keras_if_needed() -> bool:
                     stderr=subprocess.PIPE,
                     text=True
                 )
-                console.print(f"[green]✔ Local conversion succeeded.[/]")
+                console.print("[green]✔ Local conversion succeeded.[/]")
                 console.print(Text(completed_process.stdout.strip(), style="dim"))
                 return True
             except subprocess.CalledProcessError as e:
@@ -158,7 +159,7 @@ WORKDIR /app
 
 CMD ["/bin/bash"]
 '''
-        with open(dockerfile_path, 'w') as f:
+        with open(dockerfile_path, mode='w', encoding="utf-8") as f:
             f.write(dockerfile_content)
 
         image_name = 'tfjs_converter_py310_dynamic'
