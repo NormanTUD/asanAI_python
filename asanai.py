@@ -8,8 +8,6 @@ import subprocess
 from typing import Optional, Union, Any
 import shutil
 from importlib import import_module
-from contextlib import redirect_stderr, contextmanager
-import io
 
 from types import ModuleType
 import numpy as np
@@ -27,25 +25,37 @@ def dier (msg: Any) -> None:
 
 console = Console()
 
-@contextmanager
-def suppress_tf_logs():
-    # Set environment vars to suppress TensorFlow logs (level 3 = ERROR only)
-    old_level = os.environ.get("TF_CPP_MIN_LOG_LEVEL")
-    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+def _pip_install(package: str) -> bool:
+    cmd = [sys.executable, "-m", "pip", "install", package]
+    try:
+        with Progress(
+            SpinnerColumn(),
+            TextColumn(f"[cyan]Installing {package}...[/cyan]"),
+            transient=True,
+            console=console,
+        ) as progress:
+            task = progress.add_task("pip_install", start=False)
+            progress.start_task(task)
+            result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            if result.returncode != 0:
+                console.print(f"[red]Failed to install {package}.[/red]")
+                console.print(f"[red]{result.stderr.strip()}[/red]")
+            return result.returncode == 0
+    except FileNotFoundError:
+        console.print(f"[red]Python executable not found: {sys.executable}[/red]")
+    except subprocess.CalledProcessError as e:
+        console.print(f"[red]Installation failed for {package} (non-zero exit).[/red]")
+        console.print(f"[red]{e.stderr.strip()}[/red]")
+    except subprocess.SubprocessError as e:
+        console.print(f"[red]A subprocess error occurred during installation of {package}.[/red]")
+        console.print(f"[red]{str(e).strip()}[/red]")
+    except KeyboardInterrupt:
+        console.print(f"[yellow]Installation of {package} interrupted by user.[/yellow]")
 
-    # Also suppress stderr output during this context
-    with io.StringIO() as buf, redirect_stderr(buf):
-        yield
-
-    # Restore old env var
-    if old_level is None:
-        os.environ.pop("TF_CPP_MIN_LOG_LEVEL", None)
-    else:
-        os.environ["TF_CPP_MIN_LOG_LEVEL"] = old_level
-
+    return False
 
 @beartype
-def install_tensorflow() -> ModuleType:
+def install_tensorflow() -> Optional[ModuleType]:
     """
     Ensure tensorflow can be imported, installing it if needed inside a venv,
     suppressing TF clutter logs, with rich output and restarting script after install.
@@ -53,52 +63,24 @@ def install_tensorflow() -> ModuleType:
     console.rule("[bold cyan]Checking for TensorFlow...")
 
     # 1. Try import first, suppressing TF clutter logs here too
-    with suppress_tf_logs():
-        try:
-            tf = import_module("tensorflow")
-            console.print("[green]TensorFlow is already installed.[/green]")
-            return tf
-        except ModuleNotFoundError:
-            console.print("[yellow]TensorFlow not found. Installation required.[/yellow]")
+    try:
+        tf = import_module("tensorflow")
+        return tf
+    except ModuleNotFoundError:
+        console.print("[yellow]TensorFlow not found. Installation required.[/yellow]")
 
     # 2. Check virtual environment
     if sys.prefix == sys.base_prefix:
         console.print("[red]Error: You need to be in a virtual environment to install TensorFlow.[/red]")
-        sys.exit(1)
-
-    def _pip_install(package: str) -> bool:
-        cmd = [sys.executable, "-m", "pip", "install", package]
-        try:
-            with Progress(
-                SpinnerColumn(),
-                TextColumn(f"[cyan]Installing {package}...[/cyan]"),
-                transient=True,
-                console=console,
-            ) as progress:
-                task = progress.add_task("pip_install", start=False)
-                progress.start_task(task)
-                result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                if result.returncode != 0:
-                    console.print(f"[red]Failed to install {package}.[/red]")
-                    console.print(f"[red]{result.stderr.strip()}[/red]")
-                return result.returncode == 0
-
-        except subprocess.CalledProcessError as e:
-            console.print(f"[red]pip install failed: {e}[/red]")
-        except FileNotFoundError as e:
-            console.print(f"[red]pip command not found: {e}[/red]")
-
-        return False
 
     # 3. Try install tensorflow or tf_nightly
     if not _pip_install("tensorflow") and not _pip_install("tf_nightly"):
         console.print("[red]Cannot install TensorFlow via pip.[/red]")
-        sys.exit(1)
 
     # 4. Tell user to restart the script
     console.print("[green]TensorFlow installed successfully! Run the script again, it should work now.[/green]")
 
-    sys.exit(0)
+    return None
 
 
 @beartype
@@ -194,29 +176,34 @@ def convert_to_keras_if_needed() -> bool:
         keras_h5_file
     ]
 
-    if is_command_available('tensorflowjs_converter'):
-        with console.status("[bold green]Local tensorflowjs_converter found. Starting conversion..."):
-            cmd = ['tensorflowjs_converter'] + conversion_args
-            try:
-                completed_process = subprocess.run(
-                    cmd,
-                    check=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True
-                )
-                console.print("[green]✔ Local conversion succeeded.[/]")
-                console.print(Text(completed_process.stdout.strip(), style="dim"))
-                return True
-            except subprocess.CalledProcessError as e:
-                console.print("[red]✘ Local conversion failed:[/]")
-                console.print(Text(e.stderr.strip(), style="bold red"))
-                console.print("[yellow]➜ Falling back to Docker-based conversion...[/]")
-    else:
-        console.print("[yellow]⚠ tensorflowjs_converter CLI not found locally.[/]")
+    if not is_command_available('tensorflowjs_converter'):
+        if _pip_install("tensorflowjs"):
+
+            if is_command_available('tensorflowjs_converter'):
+                with console.status("[bold green]Local tensorflowjs_converter found. Starting conversion..."):
+                    cmd = ['tensorflowjs_converter'] + conversion_args
+                    try:
+                        completed_process = subprocess.run(
+                            cmd,
+                            check=True,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            text=True
+                        )
+                        console.print("[green]✔ Local conversion succeeded.[/]")
+                        console.print(Text(completed_process.stdout.strip(), style="dim"))
+                        return True
+                    except subprocess.CalledProcessError as e:
+                        console.print("[red]✘ Local conversion failed:[/]")
+                        console.print(Text(e.stderr.strip(), style="bold red"))
+                        console.print("[yellow]➜ Falling back to Docker-based conversion...[/]")
+            else:
+                console.print("[yellow]⚠ tensorflowjs_converter CLI not found locally.[/]")
+        else:
+            console.print("[yellow]⚠ Installing tensorflowjs module failed. Trying to fall back to docker.[/]")
 
     if not is_command_available('docker'):
-        console.print("[red]✘ Docker is not installed or not found in PATH. Cannot perform fallback conversion.[/]")
+        console.print("[red]✘ Docker is not installed or not found in PATH. Cannot perform fallback conversion. Please install docker.[/]")
         return False
 
     try:
