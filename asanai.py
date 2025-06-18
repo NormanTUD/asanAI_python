@@ -382,6 +382,13 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
         # Notfall: volle Genauigkeit
         return [f"{v:.10f}" for v in values]
 
+    if len(labels) != len(probs):
+        console.print(
+            f"[bold red]❌ Label count ({len(labels)}) does not match number of prediction probabilities ({len(probs)}).[/bold red]",
+        )
+        console.print("[yellow]💡 Make sure each class has a corresponding label.[/yellow]")
+        return frame  # Return original frame unmodified to avoid crash
+
     formatted_probs = format_probabilities(probs)
 
     for i, label in enumerate(labels):
