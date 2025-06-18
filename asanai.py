@@ -13,7 +13,7 @@ try:
     import json
     from types import ModuleType
 
-    from colorama import init, Style
+    from colorama import init, Style, Fore, Back, init
     import numpy as np
     import cv2
     from skimage import transform
@@ -42,7 +42,7 @@ def print_predictions_line(predictions: np.ndarray, labels: list) -> None:
     parts = []
     for i, (label, value) in enumerate(zip(labels, vals)):
         if i == max_index:
-            part = f"{Style.BRIGHT}{label}: {value:.10f}{Style.RESET_ALL}"
+            part = f"{Style.BRIGHT}{Fore.WHITE}{Back.GREEN}{label}: {value:.10f}{Style.RESET_ALL}"
         else:
             part = f"{label}: {value:.10f}"
         parts.append(part)
