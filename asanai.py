@@ -58,7 +58,7 @@ def _pip_install(package: str) -> bool:
 @beartype
 def rule(msg) -> None:
     console.rule(f"{msg}")
- 
+
 @beartype
 def install_tensorflow() -> Optional[ModuleType]:
     try:
