@@ -9,9 +9,9 @@ from typing import Optional, Union, Any, Tuple
 import shutil
 from importlib import import_module
 import json
+from types import ModuleType
 
 from colorama import init, Style
-from types import ModuleType
 import numpy as np
 import cv2
 from skimage import transform
