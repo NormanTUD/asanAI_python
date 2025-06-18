@@ -226,3 +226,22 @@ def load_frame(frame: np.ndarray, width: int = 224, height: int = 224, divideby:
     np_image = transform.resize(np_image, (height, width, 3))
     np_image = np.expand_dims(np_image, axis=0)
     return np_image
+
+@beartype
+def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]) -> np.ndarray:
+    probs = predictions[0]
+    best_idx = int(np.argmax(probs))
+
+    for i, label in enumerate(labels):
+        text = f"{label}: {probs[i]:.2f}"
+        colour = (0, 255, 0) if i == best_idx else (255, 0, 0)
+        cv2.putText(
+            frame,
+            text,
+            (10, 30 * (i + 1)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.8,
+            colour,
+            2,
+        )
+    return frame
