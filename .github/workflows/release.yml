@@ -27,7 +27,7 @@ jobs:
         pip install setuptools
     - name: Creating pyproject.toml
       run: |
-        bash .tools/create_pyproject_toml ${{ github.run_number }}
+        bash tools/create_pyproject_toml ${{ github.run_number }}
     - name: Build package
       run: |
         python -m build
