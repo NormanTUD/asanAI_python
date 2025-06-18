@@ -7,6 +7,9 @@ from beartype import beartype
 from typing import Optional, Union
 import sys
 from pprint import pprint
+import shutil
+import subprocess
+import tempfile
 
 def dier (msg):
     pprint(msg)
@@ -70,10 +73,6 @@ def rename_model_files_if_needed(directory: Optional[Union[Path, str]]) -> None:
             else:
                 console.log(f"[yellow]Warning:[/yellow] No candidate for {canonical}")
             progress.update(task_ids[canonical], completed=1)
-
-import shutil
-import subprocess
-import tempfile
 
 @beartype
 def convert_to_keras_if_needed() -> bool:
