@@ -222,9 +222,8 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
         keras_h5_file
     ]
 
-    if not _is_command_available('tensorflowjs_converter'):
-        if _pip_install_tensorflowjs_converter_and_run_it(conversion_args):
-            return True
+    if _pip_install_tensorflowjs_converter_and_run_it(conversion_args):
+        return True
 
     if not _is_command_available('docker'):
         console.print("[red]✘ Docker is not installed or not found in PATH. Cannot perform fallback conversion. Please install docker.[/]")
