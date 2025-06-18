@@ -1,5 +1,8 @@
+protobuf
 beartype
 scikit-image
 numpy
 opencv-python
 rich
+keras
+tf_keras
