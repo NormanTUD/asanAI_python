@@ -76,16 +76,21 @@ def install_tensorflow() -> ModuleType:
                 console=console,
             ) as progress:
                 task = progress.add_task("pip_install", start=False)
-                # Start subprocess without clutter on console:
                 progress.start_task(task)
                 result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 if result.returncode != 0:
                     console.print(f"[red]Failed to install {package}.[/red]")
                     console.print(f"[red]{result.stderr.strip()}[/red]")
                 return result.returncode == 0
-        except Exception as e:
-            console.print(f"[red]Exception during pip install: {e}[/red]")
-            return False
+
+        except subprocess.CalledProcessError as e:
+            console.print(f"[red]pip install failed: {e}[/red]")
+        except FileNotFoundError as e:
+            console.print(f"[red]pip command not found: {e}[/red]")
+        except Exception as e:  # optionally keep this last catch for unexpected errors
+            console.print(f"[red]Unexpected error during pip install: {e}[/red]")
+
+        return False
 
     # 3. Try install tensorflow or tf_nightly
     if not _pip_install("tensorflow") and not _pip_install("tf_nightly"):
