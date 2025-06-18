@@ -157,7 +157,7 @@ def convert_to_keras_if_needed() -> bool:
     # Check if conversion is needed
     if os.path.exists(keras_h5_file):
         console.print(f"[green]✔ Conversion not needed:[/] '{keras_h5_file}' already exists.")
-        return False
+        return True
 
     if not os.path.exists(tfjs_model_json):
         console.print(f"[yellow]⚠ Conversion not possible:[/] '{tfjs_model_json}' not found.")
