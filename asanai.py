@@ -168,10 +168,10 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
 
     files = find_model_files(directory)
 
-    tfjs_model_json = files.get("model.json")
-    weights_bin = files.get("model.weights.bin")
+    tfjs_model_json = str(files.get("model.json"))
+    weights_bin = str(files.get("model.weights.bin"))
 
-    if not model_json or not weights_bin:
+    if not tfjs_model_json or not weights_bin:
         console.log("[red]Missing model files. Conversion aborted.[/red]")
         return False
 
