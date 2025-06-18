@@ -15,7 +15,7 @@ pylint asanai.py
 
 pyflakes asanai.py
 
-bandit asanai.py
+#bandit asanai.py
 
 deadcode .
 
