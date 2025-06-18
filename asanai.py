@@ -312,3 +312,7 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
             2,
         )
     return frame
+
+@beartype
+def argmax(predictions_array: Union[list, np.ndarray]) -> Optional[int]:
+    return np.argmax(predictions[0])
