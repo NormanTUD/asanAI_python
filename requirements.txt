@@ -4,4 +4,3 @@ scikit-image
 numpy
 opencv-python
 rich
-keras
