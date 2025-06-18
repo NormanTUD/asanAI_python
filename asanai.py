@@ -13,7 +13,7 @@ try:
     import json
     from types import ModuleType
 
-    from colorama import init, Style, Fore, Back, init
+    from colorama import Style, Fore, Back, init
     import numpy as np
     import cv2
     from skimage import transform
