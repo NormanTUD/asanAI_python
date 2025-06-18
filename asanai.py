@@ -32,12 +32,17 @@ def _newest_match(directory: Union[Path, str], pattern: str) -> Path | None:
 
 @beartype
 def rename_model_files_if_needed(directory: Optional[Union[Path, str]]) -> None:
+    if directory is None:
+        console.log("[red]No directory provided[/red]")
+        return
+
+    directory = Path(directory)
+
     jobs: tuple[tuple[str, str], ...] = (
         ("model.json",        r"model\((\d+)\)\.json"),
         ("model.weights.bin", r"model\.weights\((\d+)\)\.bin"),
     )
 
-    # Nice two‑bar progress display
     with Progress(
         TextColumn("[bold]{task.description}"),
         BarColumn(bar_width=None),
@@ -61,11 +66,7 @@ def rename_model_files_if_needed(directory: Optional[Union[Path, str]]) -> None:
             newest = _newest_match(directory, regex)
             if newest:
                 newest.rename(target)
-                console.log(
-                    f"[green]Renamed[/green] {newest.name} → {canonical}"
-                )
+                console.log(f"[green]Renamed[/green] {newest.name} → {canonical}")
             else:
-                console.log(
-                    f"[yellow]Warning:[/yellow] No candidate for {canonical}"
-                )
+                console.log(f"[yellow]Warning:[/yellow] No candidate for {canonical}")
             progress.update(task_ids[canonical], completed=1)
