@@ -153,7 +153,8 @@ def rename_model_files_if_needed(directory: Optional[Union[Path, str]] = ".") ->
             progress.update(task_ids[canonical], completed=1)
 
 @beartype
-def convert_to_keras_if_needed() -> bool:
+def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> bool:
+    rename_model_files_if_needed(directory)
     keras_h5_file = 'model.h5'
     tfjs_model_json = 'model.json'
 
