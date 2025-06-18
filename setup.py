@@ -68,10 +68,6 @@ all_needed_files.extend(python_files)
 
 all_needed_files.append("LICENSE")
 all_needed_files.append("requirements.txt")
-all_needed_files.append("test_requirements.txt")
-all_needed_files.append("apt-dependencies.txt")
-all_needed_files.append(".colorfunctions.sh")
-all_needed_files.append(".shellscript_functions")
 
 setup(
     long_description=open('README.md', encoding="utf-8").read(),
