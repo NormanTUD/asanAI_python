@@ -280,44 +280,45 @@ CMD ["/bin/bash"]
 
 @beartype
 def load(filename: Union[Path, str], height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> Optional[np.ndarray]:
-    if not os.path.exists(filename):
-        console.print(f"[red]Error: The path '{filename}' could not be found![/red]")
-        return None
-
     try:
-        with console.status(f"Loading image {filename}"):
-            image = Image.open(filename)
+        if not os.path.exists(filename):
+            console.print(f"[red]Error: The path '{filename}' could not be found![/red]")
+            return None
 
-        with console.status(f"Converting image {filename} to numpy array and normalizing"):
-            np_image: np.ndarray = np.array(image).astype('float32') / divide_by
+        try:
+            with console.status(f"Loading image {filename}"):
+                image = Image.open(filename)
 
-        with console.status(f"Resizing image {filename} to ({height}, {width}, 3)"):
-            np_image = transform.resize(np_image, (height, width, 3))
+            with console.status(f"Converting image {filename} to numpy array and normalizing"):
+                np_image: np.ndarray = np.array(image).astype('float32') / divide_by
 
-        with console.status(f"Expanding numpy array dimensions from image {filename}"):
-            np_image = np.expand_dims(np_image, axis=0)
+            with console.status(f"Resizing image {filename} to ({height}, {width}, 3)"):
+                np_image = transform.resize(np_image, (height, width, 3))
 
-        return np_image
+            with console.status(f"Expanding numpy array dimensions from image {filename}"):
+                np_image = np.expand_dims(np_image, axis=0)
 
-    except PermissionError:
-        console.print(f"[red]Error: Permission denied for file '{filename}'. Please check file permissions.[/red]")
-        return None
+            return np_image
 
-    except UnidentifiedImageError:
-        console.print(f"[red]Error: The file '{filename}' is not a valid image or is corrupted.[/red]")
-        return None
+        except PermissionError:
+            console.print(f"[red]Error: Permission denied for file '{filename}'. Please check file permissions.[/red]")
 
-    except ValueError as ve:
-        console.print(f"[red]Error: ValueError encountered: {ve}. Possibly wrong image dimensions or resize parameters.[/red]")
-        return None
+        except UnidentifiedImageError:
+            console.print(f"[red]Error: The file '{filename}' is not a valid image or is corrupted.[/red]")
 
-    except TypeError as te:
-        console.print(f"[red]Error: TypeError encountered: {te}. Check if 'divide_by' is a number (int or float).[/red]")
-        return None
+        except ValueError as ve:
+            console.print(f"[red]Error: ValueError encountered: {ve}. Possibly wrong image dimensions or resize parameters.[/red]")
 
-    except OSError as ose:
-        console.print(f"[red]Error: OS error occurred: {ose}. Possible file system issue.[/red]")
-        return None
+        except TypeError as te:
+            console.print(f"[red]Error: TypeError encountered: {te}. Check if 'divide_by' is a number (int or float).[/red]")
+
+        except OSError as ose:
+            console.print(f"[red]Error: OS error occurred: {ose}. Possible file system issue.[/red]")
+    except KeyboardInterrupt:
+        console.print(f"[green]You cancelled loading the image {filename} by pressing CTRL-C[/green]")
+        sys.exit(0)
+
+    return None
 
 @beartype
 def load_frame(frame: np.ndarray, height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> Optional[np.ndarray]:
@@ -330,19 +331,21 @@ def load_frame(frame: np.ndarray, height: int = 224, width: int = 224, divide_by
 
     except cv2.error as e: # pylint: disable=no-member
         console.print(f"[red]OpenCV error during color conversion: {e}[/red]")
-        return None
 
     except ValueError as ve:
         console.print(f"[red]ValueError during resize or processing: {ve}[/red]")
-        return None
 
     except TypeError as te:
         console.print(f"[red]TypeError encountered: {te}. Check input types.[/red]")
-        return None
 
     except OSError as ose:
         console.print(f"[red]OS error occurred: {ose}.[/red]")
-        return None
+
+    except KeyboardInterrupt:
+        console.print("[green]You cancelled loading the fame by pressing CTRL-C[/green]")
+        sys.exit(0)
+
+    return None
 
 @beartype
 def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]) -> np.ndarray:
