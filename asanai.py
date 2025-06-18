@@ -195,9 +195,7 @@ def _pip_install_tensorflowjs_converter_and_run_it(conversion_args: list) -> boo
     return False
 
 @beartype
-def copy_and_patch_tfjs(model_json_path: str,
-                        weights_bin_path: str,
-                        out_prefix: str = "tmp_model") -> Tuple[str, str]:
+def copy_and_patch_tfjs(model_json_path: str, weights_bin_path: str, out_prefix: str = "tmp_model") -> Tuple[str, str]:
     json_out = f"{out_prefix}.json"
     bin_out  = f"{out_prefix}.bin"
 
