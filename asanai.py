@@ -353,8 +353,18 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
     probs = predictions[0]
     best_idx = int(np.argmax(probs))
 
+    def format_probabilities(values: np.ndarray) -> list[str]:
+        for precision in range(3, 12):  # vernünftiger Bereich
+            formatted = [f"{v:.{precision}f}" for v in values]
+            if len(set(formatted)) == len(values):
+                return formatted
+        # Notfall: volle Genauigkeit
+        return [f"{v:.10f}" for v in values]
+
+    formatted_probs = format_probabilities(probs)
+
     for i, label in enumerate(labels):
-        text = f"{label}: {probs[i]:.2f}"
+        text = f"{label}: {formatted_probs[i]}"
         colour = (0, 255, 0) if i == best_idx else (255, 0, 0)
         cv2.putText( # pylint: disable=no-member
             frame,
