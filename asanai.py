@@ -712,6 +712,18 @@ def get_shape(filename: str | Path) -> Optional[list[int]]:
                 console.print(f"[yellow]Warning:[/] No valid integers found in shape in {path}")
                 return None
             return shape_list
-    except Exception as e:
-        console.print(f"[red]Error reading shape from file {path}:[/] {e}")
+    except FileNotFoundError as e:
+        console.print(f"[red]File not found error for file {path}:[/] {e}")
+        return None
+    except UnicodeDecodeError as e:
+        console.print(f"[red]Encoding error reading file {path}:[/] {e}")
+        return None
+    except re.error as e:
+        console.print(f"[red]Regex error processing file {path}:[/] {e}")
+        return None
+    except ValueError as e:
+        console.print(f"[red]Value conversion error in file {path}:[/] {e}")
+        return None
+    except IOError as e:
+        console.print(f"[red]I/O error reading file {path}:[/] {e}")
         return None
