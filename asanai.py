@@ -731,7 +731,6 @@ def get_shape(filename: str | Path) -> Optional[list[int]]:
 @beartype
 def load_or_input_model_data(model: tf.keras.Model, filename: str) -> np.ndarray:
     input_shape = model.input_shape  # e.g. (None, 5, 10)
-    # Remove batch dimension None for reshape
     if input_shape[0] is None:
         expected_shape = input_shape[1:]
     else:
@@ -754,7 +753,6 @@ def load_or_input_model_data(model: tf.keras.Model, filename: str) -> np.ndarray
         except Exception as e:
             exit_with_error(f"Failed to load data from '{filename}': {e}")
 
-        # Check total number of elements fits expected_shape
         expected_size = np.prod(expected_shape)
         if data.size != expected_size:
             exit_with_error(
@@ -762,13 +760,11 @@ def load_or_input_model_data(model: tf.keras.Model, filename: str) -> np.ndarray
                 f"but model expects input size {expected_size}."
             )
 
-        # Reshape
         try:
             data = data.reshape(expected_shape)
         except Exception as e:
             exit_with_error(f"Failed to reshape data to {expected_shape}: {e}")
 
-        # Check dtype float
         if not np.issubdtype(data.dtype, np.floating):
             exit_with_error(f"Data type is not float, but {data.dtype}.")
 
@@ -777,22 +773,29 @@ def load_or_input_model_data(model: tf.keras.Model, filename: str) -> np.ndarray
     else:
         console.print(f"[yellow]File '{filename}' not found. Please input values manually.[/yellow]")
         total_values = np.prod(expected_shape)
-        console.print(f"Please enter {total_values} float values separated by spaces:")
 
-        user_input = input().strip()
-        values = user_input.split()
+        while True:
+            console.print(f"Please enter {total_values} float values separated by spaces:")
+            try:
+                user_input = input().strip()
+            except KeyboardInterrupt:
+                console.print("[yellow]You cancelled with CTRL C[/yellow]")
+                sys.exit(1)
 
-        if len(values) != total_values:
-            exit_with_error(
-                f"Incorrect number of values entered ({len(values)}), expected {total_values}."
-            )
+            values = user_input.split()
 
-        if not is_float_list(values):
-            exit_with_error("Input contains non-float values.")
+            if len(values) != total_values:
+                console.print(f"[red]Incorrect number of values entered ({len(values)}), expected {total_values}. Please try again.[/red]")
+                continue
 
-        try:
-            data = np.array([float(x) for x in values]).reshape(expected_shape)
-        except Exception as e:
-            exit_with_error(f"Failed to reshape manual input to {expected_shape}: {e}")
+            if not is_float_list(values):
+                console.print("[red]Input contains non-float values. Please try again.[/red]")
+                continue
 
-        return data
+            try:
+                data = np.array([float(x) for x in values]).reshape(expected_shape)
+            except Exception as e:
+                console.print(f"[red]Failed to reshape manual input to {expected_shape}: {e}. Please try again.[/red]")
+                continue
+
+            return data
