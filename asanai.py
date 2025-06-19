@@ -810,4 +810,4 @@ def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
             console.print("[red]Input contains non-float values. Please try again.[/red]")
             continue
 
-        return data
+        return values
