@@ -202,11 +202,8 @@ def install_tensorflow() -> Optional[ModuleType]:
 
         sys.exit(1)
 
-    # Full import after installation
-    tf = import_module("tensorflow")
     console.print("[green]TensorFlow installed successfully![/green]")
 
-    # Prevent the Windows “python.exe closes instantly” issue
     if platform.system() == "Windows" and not sys.stdin.isatty():
         input("Press Enter to exit and rerun your script…")
 
