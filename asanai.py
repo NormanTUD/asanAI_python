@@ -437,7 +437,7 @@ def try_install_docker():
     return False
 
 @beartype
-def check_docker_and_try_to_install(tfjs_model_json: str, weights_bin: str) -> None:
+def check_docker_and_try_to_install(tfjs_model_json: str, weights_bin: str) -> bool:
     if not _is_command_available('docker'):
         if not try_install_docker():
             delete_tmp_files(tfjs_model_json, weights_bin)
