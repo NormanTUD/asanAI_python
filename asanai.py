@@ -352,6 +352,25 @@ def delete_tmp_files(json_file, bin_file) -> None:
             os.unlink(bin_file)
 
 @beartype
+def suggest_docker_installation() -> None:
+    system = platform.system()
+
+    urls = {
+        'Linux': 'https://docs.docker.com/engine/install/',
+        'Darwin': 'https://docs.docker.com/docker-for-mac/install/',
+        'Windows': 'https://docs.docker.com/docker-for-windows/install/',
+    }
+
+    console.print("[red]✘ Docker is not installed. Please install it manually.[/red]")
+
+    url = urls.get(system)
+
+    if url:
+        console.print(f"[blue]See {system} on how to install it.[/blue]")
+    else:
+        console.print("[red]Unsupported system. Please install Docker manually from https://docs.docker.com/[/red]")
+
+@beartype
 def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> bool:
     keras_h5_file = 'model.h5'
 
@@ -395,7 +414,7 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
         return True
 
     if not _is_command_available('docker'):
-        console.print("[red]✘ Docker is not installed or not found in PATH. Cannot perform fallback conversion. Please install docker.[/]")
+        suggest_docker_installation()
         delete_tmp_files(tfjs_model_json, weights_bin)
         return False
 
