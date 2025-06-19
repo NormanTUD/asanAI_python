@@ -666,8 +666,6 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
     best_idx = int(np.argmax(probs))
 
     if len(labels) != len(probs):
-        from rich.console import Console
-        console = Console()
         console.print(
             f"[bold red]❌ Label count ({len(labels)}) does not match number of prediction probabilities ({len(probs)}).[/bold red]",
         )
