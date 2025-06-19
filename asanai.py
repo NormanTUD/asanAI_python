@@ -151,7 +151,6 @@ def install_tensorflow(full_argv: Optional[list] = None) -> Optional[ModuleType]
     with console.status("Fast-probing TensorFlow Module. Will load and return it if it exists."):
         if util.find_spec("tensorflow"):
             tf = import_module("tensorflow")  # full import only when needed
-            console.print("[green]TensorFlow already available.[/green]")
             _gpu_hint()
             return tf
 
