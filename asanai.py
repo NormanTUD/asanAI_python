@@ -652,16 +652,17 @@ def load_frame(frame: np.ndarray, height: int = 224, width: int = 224, divide_by
     return None
 
 @beartype
+def _format_probabilities(values: np.ndarray) -> list[str]:
+    for precision in range(3, 12):  # vernünftiger Bereich
+        formatted = [f"{v:.{precision}f}" for v in values]
+        if len(set(formatted)) == len(values):
+            return formatted
+    return [f"{v:.10f}" for v in values]
+
+@beartype
 def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]) -> Optional[np.ndarray]:
     probs = predictions[0]
     best_idx = int(np.argmax(probs))
-
-    def format_probabilities(values: np.ndarray) -> list[str]:
-        for precision in range(3, 12):  # vernünftiger Bereich
-            formatted = [f"{v:.{precision}f}" for v in values]
-            if len(set(formatted)) == len(values):
-                return formatted
-        return [f"{v:.10f}" for v in values]
 
     if len(labels) != len(probs):
         console.print(
@@ -671,7 +672,7 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
 
         sys.exit(0)
 
-    formatted_probs = format_probabilities(probs)
+    formatted_probs = _format_probabilities(probs)
 
     for i, label in enumerate(labels):
         text = f"{label}: {formatted_probs[i]}"
