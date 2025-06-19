@@ -19,7 +19,7 @@ try:
     import numpy as np
     import cv2
     from skimage import transform
-    from PIL import Image, UnidentifiedImageError
+    from PIL import Image, UnidentifiedImageError, ImageDraw, ImageFont
     from rich.console import Console
     from rich.progress import SpinnerColumn, Progress, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn
     from rich.text import Text
