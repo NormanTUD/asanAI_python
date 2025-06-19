@@ -1,7 +1,7 @@
 import sys
 
 try:
-    from pprint import pprint
+    import pprint
     import re
     import os
     from pathlib import Path
@@ -31,7 +31,7 @@ init(autoreset=True)
 
 @beartype
 def dier (msg: Any) -> None:
-    pprint(msg)
+    pprint.pprint(msg)
     sys.exit(1)
 
 console = Console()
@@ -742,6 +742,12 @@ def _is_float_list(lst) -> bool:
     except ValueError:
         return False
 
+@beartype
+def _convert_to_ndarray(values: list[str], expected_shape: Any) -> np.ndarray:
+    float_values = list(map(float, values))  # Convert strings to floats
+    arr = np.array(float_values).reshape(expected_shape)  # Convert to ndarray and reshape
+    return arr
+
 # pylint: disable=too-many-branches
 @beartype
 def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
@@ -810,4 +816,8 @@ def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
             console.print("[red]Input contains non-float values. Please try again.[/red]")
             continue
 
-        return values
+        return _convert_to_ndarray(values, expected_shape)
+
+@beartype
+def show_result(msg) -> None:
+    pprint.pprint(msg)
