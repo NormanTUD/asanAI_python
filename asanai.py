@@ -342,6 +342,16 @@ def copy_and_patch_tfjs(model_json_path: str, weights_bin_path: str, out_prefix:
     return json_out, bin_out
 
 @beartype
+def delete_tmp_files(json_file, bin_file) -> None:
+    if os.path.exists(json_file):
+        with console.status(f"[bold green]Deleting {json_file}..."):
+            os.unlink(json_file)
+
+    if os.path.exists(bin_file):
+        with console.status(f"[bold green]Deleting {bin_file}..."):
+            os.unlink(bin_file)
+
+@beartype
 def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> bool:
     rule("[bold cyan]Trying to see if if it is neccessary to convert TFJS models to Keras[/]")
 
@@ -360,14 +370,15 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
         console.print("[red]No model.json and/or model.weights.bin found. Cannot continue. Have you downloaded the models from asanAI? If not, do so and put them in the same folder as your script.[/red]")
         sys.exit(1)
 
+    if not os.path.exists(original_tfjs_model_json):
+        console.print(f"[yellow]⚠ Conversion not possible:[/] '{original_tfjs_model_json}' not found.")
+        return False
+
     tfjs_model_json, weights_bin = copy_and_patch_tfjs(original_tfjs_model_json, original_weights_bin)
 
     if not tfjs_model_json or not weights_bin:
         console.log("[red]Missing model files. Conversion aborted.[/red]")
-        return False
-
-    if not os.path.exists(original_tfjs_model_json):
-        console.print(f"[yellow]⚠ Conversion not possible:[/] '{original_tfjs_model_json}' not found.")
+        delete_tmp_files(tfjs_model_json, weights_bin)
         return False
 
     console.print(f"[cyan]Conversion needed:[/] '{keras_h5_file}' does not exist, but '{original_tfjs_model_json}' found.")
@@ -382,16 +393,19 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
     ]
 
     if _pip_install_tensorflowjs_converter_and_run_it(conversion_args):
+        delete_tmp_files(tfjs_model_json, weights_bin)
         return True
 
     if not _is_command_available('docker'):
         console.print("[red]✘ Docker is not installed or not found in PATH. Cannot perform fallback conversion. Please install docker.[/]")
+        delete_tmp_files(tfjs_model_json, weights_bin)
         return False
 
     try:
         subprocess.run(['docker', 'info'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except subprocess.CalledProcessError:
         console.print("[red]✘ Docker daemon not running or inaccessible. Cannot perform fallback conversion.[/]")
+        delete_tmp_files(tfjs_model_json, weights_bin)
         return False
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -437,10 +451,12 @@ CMD ["/bin/bash"]
                 progress.stop()
                 console.print("[red]✘ Docker build failed with error:[/]")
                 console.print(Text(e.stderr.strip(), style="bold red"))
+                delete_tmp_files(tfjs_model_json, weights_bin)
                 return False
             except KeyboardInterrupt:
                 progress.stop()
                 console.print("[red]✘ Docker build was cancelled by CTRL-C[/]")
+                delete_tmp_files(tfjs_model_json, weights_bin)
                 sys.exit(0)
 
         run_cmd = [
@@ -458,10 +474,14 @@ CMD ["/bin/bash"]
             except subprocess.CalledProcessError as e:
                 console.print("[red]✘ Conversion inside Docker container failed with error:[/]")
                 console.print(Text(e.stderr.strip(), style="bold red"))
+                delete_tmp_files(tfjs_model_json, weights_bin)
                 return False
             except KeyboardInterrupt:
                 console.print("[red]✘ Docker build was cancelled by CTRL-C[/]")
+                delete_tmp_files(tfjs_model_json, weights_bin)
                 sys.exit(0)
+
+    delete_tmp_files(tfjs_model_json, weights_bin)
 
     return True
 
