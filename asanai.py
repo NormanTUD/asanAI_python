@@ -714,10 +714,23 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
         # Zurück in OpenCV (RGB → BGR)
         frame = cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR)  # pylint: disable=no-member
 
-    except Exception as e:
-        print("Fehler beim Zeichnen mit TrueType-Font:", e)
+    except (OSError, FileNotFoundError, ValueError, AttributeError, TypeError) as specific_err:
+        print("Spezifischer Fehler beim Zeichnen mit TrueType-Font:", specific_err)
         traceback.print_exc()
-        # fallback: gib trotzdem das originale Frame zurück
+
+        # Fallback mit cv2.putText
+        for i, label in enumerate(labels):
+            text = f"{label}: {formatted_probs[i]}"
+            colour = (0, 255, 0) if i == best_idx else (255, 0, 0)
+            cv2.putText(  # pylint: disable=no-member
+                frame,
+                text,
+                (10, 30 * (i + 1)),
+                cv2.FONT_HERSHEY_SIMPLEX,  # pylint: disable=no-member
+                0.8,
+                colour,
+                2,
+            )
 
     return frame
 
