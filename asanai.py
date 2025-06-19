@@ -727,3 +727,85 @@ def get_shape(filename: str | Path) -> Optional[list[int]]:
     except IOError as e:
         console.print(f"[red]I/O error reading file {path}:[/] {e}")
         return None
+
+@beartype
+def load_or_input_model_data(model: tf.keras.Model, filename: str) -> np.ndarray:
+    """
+    Loads input data for the model from a file or asks the user for manual input.
+    The data is reshaped to the model's expected input shape.
+
+    Args:
+        model: TensorFlow Keras model.
+        filename: Path to the data file (text, numeric).
+
+    Returns:
+        np.ndarray suitable for model.predict()
+
+    Exits with sys.exit(1) if anything fails.
+    """
+    input_shape = model.input_shape  # e.g. (None, 5, 10)
+    # Remove batch dimension None for reshape
+    if input_shape[0] is None:
+        expected_shape = input_shape[1:]
+    else:
+        expected_shape = input_shape
+
+    def exit_with_error(msg: str):
+        console.print(f"[bold red]ERROR:[/bold red] {msg}")
+        sys.exit(1)
+
+    def is_float_list(lst) -> bool:
+        try:
+            [float(x) for x in lst]
+            return True
+        except ValueError:
+            return False
+
+    if os.path.isfile(filename):
+        try:
+            data = np.loadtxt(filename)
+        except Exception as e:
+            exit_with_error(f"Failed to load data from '{filename}': {e}")
+
+        # Check total number of elements fits expected_shape
+        expected_size = np.prod(expected_shape)
+        if data.size != expected_size:
+            exit_with_error(
+                f"Data size mismatch. File contains {data.size} elements, "
+                f"but model expects input size {expected_size}."
+            )
+
+        # Reshape
+        try:
+            data = data.reshape(expected_shape)
+        except Exception as e:
+            exit_with_error(f"Failed to reshape data to {expected_shape}: {e}")
+
+        # Check dtype float
+        if not np.issubdtype(data.dtype, np.floating):
+            exit_with_error(f"Data type is not float, but {data.dtype}.")
+
+        return data
+
+    else:
+        console.print(f"[yellow]File '{filename}' not found. Please input values manually.[/yellow]")
+        total_values = np.prod(expected_shape)
+        console.print(f"Please enter {total_values} float values separated by spaces:")
+
+        user_input = input().strip()
+        values = user_input.split()
+
+        if len(values) != total_values:
+            exit_with_error(
+                f"Incorrect number of values entered ({len(values)}), expected {total_values}."
+            )
+
+        if not is_float_list(values):
+            exit_with_error("Input contains non-float values.")
+
+        try:
+            data = np.array([float(x) for x in values]).reshape(expected_shape)
+        except Exception as e:
+            exit_with_error(f"Failed to reshape manual input to {expected_shape}: {e}")
+
+        return data
