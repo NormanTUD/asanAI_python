@@ -13,6 +13,7 @@ try:
     import json
     from types import ModuleType
     import platform
+    import traceback
 
     from colorama import Style, Fore, Back, init
     import numpy as np
@@ -665,27 +666,61 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
     best_idx = int(np.argmax(probs))
 
     if len(labels) != len(probs):
+        from rich.console import Console
+        console = Console()
         console.print(
             f"[bold red]❌ Label count ({len(labels)}) does not match number of prediction probabilities ({len(probs)}).[/bold red]",
         )
         console.print("[yellow]Make sure the number of labels in your script is correct.[/yellow]")
-
         sys.exit(0)
 
     formatted_probs = _format_probabilities(probs)
 
-    for i, label in enumerate(labels):
-        text = f"{label}: {formatted_probs[i]}"
-        colour = (0, 255, 0) if i == best_idx else (255, 0, 0)
-        cv2.putText( # pylint: disable=no-member
-            frame,
-            text,
-            (10, 30 * (i + 1)),
-            cv2.FONT_HERSHEY_SIMPLEX, # pylint: disable=no-member
-            0.8,
-            colour,
-            2,
-        )
+    try:
+        # Font automatisch aus Systemverzeichnissen auswählen
+        font_path_candidates = [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",    # Linux
+            "C:/Windows/Fonts/arial.ttf",                              # Windows
+            "/System/Library/Fonts/Supplemental/Arial.ttf",            # macOS
+        ]
+        font_path = next((fp for fp in font_path_candidates if os.path.exists(fp)), None)
+        if font_path is None:
+            raise FileNotFoundError("Kein gültiger TrueType-Font (Arial/DejaVuSans) gefunden.")
+
+        font_size = 20
+        outline_width = 2
+
+        # OpenCV-Bild (BGR → RGB → PIL)
+        image_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        draw = ImageDraw.Draw(image_pil)
+        font = ImageFont.truetype(font_path, font_size)
+
+        for i, label in enumerate(labels):
+            text = f"{label}: {formatted_probs[i]}"
+            y = 30 * (i + 1)
+
+            # Farben wie im Original
+            fill_color = (0, 255, 0) if i == best_idx else (255, 0, 0)
+            outline_color = (0, 0, 0)
+
+            # Text mit Outline (Rand)
+            for dx in range(-outline_width, outline_width + 1):
+                for dy in range(-outline_width, outline_width + 1):
+                    if dx == 0 and dy == 0:
+                        continue
+                    draw.text((10 + dx, y + dy), text, font=font, fill=outline_color)
+
+            # Haupttext
+            draw.text((10, y), text, font=font, fill=fill_color)
+
+        # Zurück in OpenCV (RGB → BGR)
+        frame = cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR)
+
+    except Exception as e:
+        print("Fehler beim Zeichnen mit TrueType-Font:", e)
+        traceback.print_exc()
+        # fallback: gib trotzdem das originale Frame zurück
+
     return frame
 
 @beartype
