@@ -98,6 +98,7 @@ def install_tensorflow() -> Optional[ModuleType]:
 
         if sys.prefix == sys.base_prefix:
             console.print("[red]Error: You need to be in a virtual environment to install TensorFlow.[/red]")
+            sys.exit(1)
 
         if not _pip_install("tensorflow") and not _pip_install("tf_nightly"):
             console.print("[red]Cannot install TensorFlow via pip.[/red]")
