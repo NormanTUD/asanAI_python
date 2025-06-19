@@ -788,7 +788,6 @@ def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
 
         return data
 
-    console.print(f"[yellow]File '{filename}' not found. Please input values manually.[/yellow]")
     total_values = np.prod(expected_shape)
 
     while True:
