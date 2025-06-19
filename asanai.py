@@ -730,19 +730,6 @@ def get_shape(filename: str | Path) -> Optional[list[int]]:
 
 @beartype
 def load_or_input_model_data(model: tf.keras.Model, filename: str) -> np.ndarray:
-    """
-    Loads input data for the model from a file or asks the user for manual input.
-    The data is reshaped to the model's expected input shape.
-
-    Args:
-        model: TensorFlow Keras model.
-        filename: Path to the data file (text, numeric).
-
-    Returns:
-        np.ndarray suitable for model.predict()
-
-    Exits with sys.exit(1) if anything fails.
-    """
     input_shape = model.input_shape  # e.g. (None, 5, 10)
     # Remove batch dimension None for reshape
     if input_shape[0] is None:
