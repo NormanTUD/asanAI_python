@@ -144,7 +144,7 @@ def _platform_wheel_warning() -> None:
             "not supported by official TensorFlow wheels.[/red]"
         )
 
-def install_tensorflow() -> Optional[ModuleType]:
+def install_tensorflow(full_argv: list = []) -> Optional[ModuleType]:
     console.rule("[bold cyan]Checking for TensorFlow…[/bold cyan]")
 
     # Fast probe (avoids 3‑second heavy import cost if present)
@@ -202,12 +202,9 @@ def install_tensorflow() -> Optional[ModuleType]:
 
         sys.exit(1)
 
-    console.print("[green]TensorFlow installed successfully![/green]")
+    console.print("[green]TensorFlow installed successfully! Trying to restart the script automatically...[/green]")
 
-    if platform.system() == "Windows" and not sys.stdin.isatty():
-        input("Press Enter to exit and rerun your script…")
-
-    sys.exit(0)
+    os.execv(sys.executable, [sys.executable] + full_argv)
 
 @beartype
 def _newest_match(directory: Union[Path, str], pattern: str) -> Optional[Path]:
