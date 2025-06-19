@@ -815,7 +815,11 @@ def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
             console.print("[red]Input contains non-float values. Please try again.[/red]")
             continue
 
-        return _convert_to_ndarray(values, expected_shape)
+        try:
+            return _convert_to_ndarray(values, expected_shape)
+        except ValueError as e:
+            console.print(f"[red]Error trying to convert to Numpy-Array: {e}[/red]")
+            continue
 
 @beartype
 def show_result(msg) -> None:
