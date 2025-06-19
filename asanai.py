@@ -742,7 +742,7 @@ def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
 
     def is_float_list(lst) -> bool:
         try:
-            [float(x) for x in lst]
+            any(float(x) for x in lst)
             return True
         except ValueError:
             return False
