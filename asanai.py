@@ -437,7 +437,7 @@ def try_install_docker():
     return False
 
 @beartype
-def check_docker_and_try_to_install() -> None:
+def check_docker_and_try_to_install(tfjs_model_json: str, weights_bin: ) -> None:
     if not _is_command_available('docker'):
         if not try_install_docker():
             delete_tmp_files(tfjs_model_json, weights_bin)
@@ -493,7 +493,7 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
         delete_tmp_files(tfjs_model_json, weights_bin)
         return True
 
-    if not check_docker_and_try_to_install():
+    if not check_docker_and_try_to_install(tfjs_model_json, weights_bin):
         return False
 
     try:
