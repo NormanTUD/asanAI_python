@@ -179,10 +179,8 @@ def install_tensorflow(full_argv: Optional[list] = None) -> Optional[ModuleType]
     if platform.system() == "Darwin" and platform.machine().lower() in {"arm64", "aarch64"}:
         pkg_name = "tensorflow-macos"
 
-    # 1️⃣  Try stable wheel
     if _pip_install(pkg_name):
         _gpu_hint()
-    # 2️⃣  Try nightly
     elif _pip_install("tf-nightly"):
         console.print("[yellow]Falling back to nightly build.[/yellow]")
         _gpu_hint()
