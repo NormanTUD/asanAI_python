@@ -750,8 +750,14 @@ def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
     if os.path.isfile(filename):
         try:
             data = np.loadtxt(filename)
-        except Exception as e:
-            exit_with_error(f"Failed to load data from '{filename}': {e}")
+        except FileNotFoundError:
+            exit_with_error(f"File '{filename}' not found.")
+        except IsADirectoryError:
+            exit_with_error(f"Expected a file but found a directory: '{filename}'.")
+        except ValueError as e:
+            exit_with_error(f"Data format error in '{filename}': {e}")
+        except OSError as e:
+            exit_with_error(f"I/O error while reading '{filename}': {e}")
 
         expected_size = np.prod(expected_shape)
         if data.size != expected_size:
@@ -762,8 +768,10 @@ def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
 
         try:
             data = data.reshape(expected_shape)
-        except Exception as e:
-            exit_with_error(f"Failed to reshape data to {expected_shape}: {e}")
+        except ValueError as e:
+            exit_with_error(f"Cannot reshape data to {expected_shape}: {e}")
+        except TypeError as e:
+            exit_with_error(f"Invalid shape argument {expected_shape}: {e}")
 
         if not np.issubdtype(data.dtype, np.floating):
             exit_with_error(f"Data type is not float, but {data.dtype}.")
