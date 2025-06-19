@@ -353,13 +353,13 @@ def delete_tmp_files(json_file, bin_file) -> None:
 
 @beartype
 def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> bool:
-    rule("[bold cyan]Trying to see if if it is neccessary to convert TFJS models to Keras[/]")
-
     keras_h5_file = 'model.h5'
 
     if os.path.exists(keras_h5_file):
         console.print(f"[green]✔ Conversion not needed:[/] '{keras_h5_file}' already exists.")
         return True
+
+    rule("[bold cyan]Trying to convert downloaded model files[/]")
 
     files = find_model_files(directory)
 
@@ -382,8 +382,6 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
         return False
 
     console.print(f"[cyan]Conversion needed:[/] '{keras_h5_file}' does not exist, but '{original_tfjs_model_json}' found.")
-
-    # Helper function to check if a command exists in PATH
 
     conversion_args = [
         '--input_format=tfjs_layers_model',
