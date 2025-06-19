@@ -688,7 +688,7 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
     return frame
 
 @beartype
-def get_shape(filename: str | Path) -> Optional[List[int]]:
+def get_shape(filename: str | Path) -> Optional[list[int]]:
     path = Path(filename)
     if not path.exists():
         console.print(f"[red]Error:[/] File does not exist: {path}")
@@ -699,7 +699,7 @@ def get_shape(filename: str | Path) -> Optional[List[int]]:
 
     try:
         with console.status(f"Reading shape from file: {path}", spinner="dots"):
-            with path.open("r") as f:
+            with path.open(mode="r", encoding="utf-8") as f:
                 first_line = f.readline()
             match = re.search(r"shape:\s*\((.*)\)", first_line)
             if not match:
