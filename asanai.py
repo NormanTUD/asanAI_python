@@ -729,7 +729,7 @@ def get_shape(filename: str | Path) -> Optional[list[int]]:
         return None
 
 @beartype
-def load_or_input_model_data(model: tf.keras.Model, filename: str) -> np.ndarray:
+def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
     input_shape = model.input_shape  # e.g. (None, 5, 10)
     if input_shape[0] is None:
         expected_shape = input_shape[1:]
@@ -770,32 +770,31 @@ def load_or_input_model_data(model: tf.keras.Model, filename: str) -> np.ndarray
 
         return data
 
-    else:
-        console.print(f"[yellow]File '{filename}' not found. Please input values manually.[/yellow]")
-        total_values = np.prod(expected_shape)
+    console.print(f"[yellow]File '{filename}' not found. Please input values manually.[/yellow]")
+    total_values = np.prod(expected_shape)
 
-        while True:
-            console.print(f"Please enter {total_values} float values separated by spaces:")
-            try:
-                user_input = input().strip()
-            except KeyboardInterrupt:
-                console.print("[yellow]You cancelled with CTRL C[/yellow]")
-                sys.exit(1)
+    while True:
+        console.print(f"Please enter {total_values} float values separated by spaces:")
+        try:
+            user_input = input().strip()
+        except KeyboardInterrupt:
+            console.print("[yellow]You cancelled with CTRL C[/yellow]")
+            sys.exit(1)
 
-            values = user_input.split()
+        values = user_input.split()
 
-            if len(values) != total_values:
-                console.print(f"[red]Incorrect number of values entered ({len(values)}), expected {total_values}. Please try again.[/red]")
-                continue
+        if len(values) != total_values:
+            console.print(f"[red]Incorrect number of values entered ({len(values)}), expected {total_values}. Please try again.[/red]")
+            continue
 
-            if not is_float_list(values):
-                console.print("[red]Input contains non-float values. Please try again.[/red]")
-                continue
+        if not is_float_list(values):
+            console.print("[red]Input contains non-float values. Please try again.[/red]")
+            continue
 
-            try:
-                data = np.array([float(x) for x in values]).reshape(expected_shape)
-            except Exception as e:
-                console.print(f"[red]Failed to reshape manual input to {expected_shape}: {e}. Please try again.[/red]")
-                continue
+        try:
+            data = np.array([float(x) for x in values]).reshape(expected_shape)
+        except Exception as e:
+            console.print(f"[red]Failed to reshape manual input to {expected_shape}: {e}. Please try again.[/red]")
+            continue
 
-            return data
+        return data
