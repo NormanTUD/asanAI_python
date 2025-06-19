@@ -24,15 +24,6 @@ jobs:
       run: |
         ./tests/linter
 
-    - name: Create a new version
-      if: ${{ success() }}
-      run: |
-        echo "Creating new version"
-        git tag ${{ github.run_number }} || true
-        git push origin --tags || true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   endtoendtest:
     needs: [linter]
     permissions:
@@ -48,6 +39,15 @@ jobs:
     - name: Running example script
       run: |
         ./tests/run_example_script
+
+    - name: Create a new version
+      if: ${{ success() }}
+      run: |
+        echo "Creating new version"
+        git tag ${{ github.run_number }} || true
+        git push origin --tags || true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy-to-pypi:
     needs: [endtoendtest]
