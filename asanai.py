@@ -742,6 +742,7 @@ def _is_float_list(lst) -> bool:
     except ValueError:
         return False
 
+# pylint: disable=too-many-branches
 @beartype
 def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
     input_shape = model.input_shape  # e.g. (None, 5, 10)
