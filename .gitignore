@@ -194,3 +194,4 @@ cython_debug/
 .cursorindexingignore
 pyproject.toml
 testenv
+tests/example_script/model.h5

@@ -6,6 +6,8 @@ cd "$SCRIPT_DIR/example_script"
 
 python3 example.py slimer.png
 
+rm model.h5
+
 exit_code=$?
 
 echo "exit_code: $exit_code"
