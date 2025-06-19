@@ -9,9 +9,10 @@ try:
     import subprocess
     from typing import Optional, Union, Any, Tuple
     import shutil
-    from importlib import import_module
+    from importlib import import_module, util
     import json
     from types import ModuleType
+    import platform
 
     from colorama import Style, Fore, Back, init
     import numpy as np
@@ -52,6 +53,10 @@ def print_predictions_line(predictions: np.ndarray, labels: list) -> None:
     sys.stdout.flush()
 
 def _pip_install(package: str) -> bool:
+    if not _pip_available():
+        console.print("[red]pip is not available – cannot install packages automatically.[/red]")
+        return False
+
     cmd = [sys.executable, "-m", "pip", "install", package]
     try:
         with Progress(
@@ -84,34 +89,128 @@ def _pip_install(package: str) -> bool:
 def rule(msg) -> None:
     console.rule(f"{msg}")
 
-@beartype
+def _in_virtual_env() -> bool:
+    return (
+        # virtualenv / venv
+        sys.prefix != getattr(sys, "base_prefix", sys.prefix)
+        or hasattr(sys, "real_prefix")
+        # conda
+        or bool(os.environ.get("CONDA_PREFIX"))
+    )
+
+def _pip_available() -> bool:
+    return shutil.which("pip") is not None or util.find_spec("pip") is not None
+
+def _proxy_hint() -> None:
+    if not (os.environ.get("HTTP_PROXY") or os.environ.get("HTTPS_PROXY")):
+        console.print(
+            "[yellow]No HTTP(S)_PROXY found – if you’re behind a proxy or corporate "
+            "firewall, set HTTP_PROXY / HTTPS_PROXY or pass --proxy to pip.[/yellow]"
+        )
+
+
+def _gpu_hint() -> None:
+    if shutil.which("nvidia-smi"):
+        console.print("[green]CUDA‑capable GPU detected via nvidia‑smi.[/green]")
+    elif platform.system() == "Darwin" and platform.machine() in {"arm64", "aarch64"}:
+        console.print(
+            "[yellow]Apple Silicon detected. "
+            "For GPU acceleration install [bold]tensorflow-metal[/bold] as well.[/yellow]"
+        )
+    else:
+        console.print(
+            "[yellow]No GPU detected (or drivers missing). "
+            "CPU builds will run, but training will be slower.[/yellow]"
+        )
+
+
+def _platform_wheel_warning() -> None:
+    sys_name = platform.system()
+    arch = platform.machine().lower()
+
+    if sys_name == "Darwin" and arch in {"arm64", "aarch64"}:
+        console.print(
+            "[yellow]ARM macOS: Regular 'tensorflow' wheels don’t work – "
+            "falling back to [bold]tensorflow-macos[/bold].[/yellow]"
+        )
+    elif sys_name == "Linux" and arch not in {"x86_64", "amd64"}:
+        console.print(
+            "[red]Warning: Pre‑built TensorFlow wheels for this CPU architecture "
+            "may not exist. Manual build might be required.[/red]"
+        )
+    elif sys_name == "Windows" and arch not in {"amd64", "x86_64"}:
+        console.print(
+            "[red]Warning: Non‑64‑bit Windows or uncommon architectures are "
+            "not supported by official TensorFlow wheels.[/red]"
+        )
+
 def install_tensorflow() -> Optional[ModuleType]:
-    try:
-        rule("[bold cyan]Checking for TensorFlow...[/]")
+    console.rule("[bold cyan]Checking for TensorFlow…[/bold cyan]")
 
-        try:
-            tf = import_module("tensorflow")
-
+    # Fast probe (avoids 3‑second heavy import cost if present)
+    with console.status("Fast-probing TensorFlow Module. Will load and return it if it exists."):
+        if util.find_spec("tensorflow"):
+            tf = import_module("tensorflow")  # full import only when needed
+            console.print("[green]TensorFlow already available.[/green]")
+            _gpu_hint()
             return tf
-        except ModuleNotFoundError:
-            console.print("[yellow]TensorFlow not found. Installation required.[/yellow]")
 
-        if sys.prefix == sys.base_prefix:
-            console.print("[red]Error: You need to be in a virtual environment to install TensorFlow.[/red]")
-            sys.exit(1)
+    console.print("[yellow]TensorFlow not found. Installation required.[/yellow]")
 
-        if not _pip_install("tensorflow") and not _pip_install("tf_nightly"):
-            console.print("[red]Cannot install TensorFlow via pip.[/red]")
+    # Safety: insist on an env
+    if not _in_virtual_env():
+        console.print(
+            "[red]You must activate a virtual environment (venv or conda) "
+            "before installing TensorFlow.[/red]"
+        )
+        sys.exit(1)
 
-            _pip_install("keras")
-            _pip_install("tf_keras")
+    _platform_wheel_warning()
 
-        console.print("[green]TensorFlow installed successfully! Run the script again, it should work now.[/green]")
+    # Choose package name based on platform
+    pkg_name = "tensorflow"
+    if platform.system() == "Darwin" and platform.machine().lower() in {"arm64", "aarch64"}:
+        pkg_name = "tensorflow-macos"
 
-        sys.exit(0)
-    except KeyboardInterrupt:
-        console.print("[green]You cancelled loading or installing TensorFlow by pressing CTRL-C. The script generated by asanAI will not work without tensorflow being installed. Try running it again or install it manually to the virtualenv.[/green]")
-        sys.exit(0)
+    # 1️⃣  Try stable wheel
+    if _pip_install(pkg_name):
+        _gpu_hint()
+    # 2️⃣  Try nightly
+    elif _pip_install("tf-nightly"):
+        console.print("[yellow]Falling back to nightly build.[/yellow]")
+        _gpu_hint()
+    else:
+        venv_path = os.environ.get("VIRTUAL_ENV") or os.environ.get("CONDA_PREFIX") or sys.prefix
+        activate_hint = ""
+
+        if platform.system() == "Windows":
+            bat_path = os.path.join(venv_path, "Scripts", "activate.bat")
+            ps1_path = os.path.join(venv_path, "Scripts", "Activate.ps1")
+            activate_hint = (
+                f"\n[bold]CMD:[/bold]      {bat_path}\n"
+                f"[bold]PowerShell:[/bold] {ps1_path}"
+            )
+        else:
+            sh_path = os.path.join(venv_path, "bin", "activate")
+            activate_hint = f"\n[bold]Bash/zsh:[/bold] source {sh_path}"
+
+        console.print(
+            "[red]Automatic installation failed.[/red]\n"
+            "[yellow]Please install TensorFlow manually inside your virtual environment.[/yellow]"
+            f"{activate_hint}"
+        )
+
+        sys.exit(1)
+
+    # Full import after installation
+    tf = import_module("tensorflow")
+    console.print("[green]TensorFlow installed successfully![/green]")
+
+    # Prevent the Windows “python.exe closes instantly” issue
+    if platform.system() == "Windows" and not sys.stdin.isatty():
+        input("Press Enter to exit and rerun your script…")
+
+    sys.exit(0)
 
 @beartype
 def _newest_match(directory: Union[Path, str], pattern: str) -> Optional[Path]:
