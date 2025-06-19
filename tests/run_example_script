@@ -2,9 +2,9 @@
 
 SCRIPT_DIR=$(dirname $(realpath "$0"))
 
-cd example_script
+cd "$SCRIPT_DIR/example_script"
 
-python3 test.py
+python3 example.py
 
 exit_code=$?
 
