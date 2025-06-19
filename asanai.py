@@ -29,6 +29,7 @@ except ModuleNotFoundError as e:
 
 init(autoreset=True)
 
+@beartype
 def dier (msg: Any) -> None:
     pprint(msg)
     sys.exit(1)
@@ -52,6 +53,7 @@ def print_predictions_line(predictions: np.ndarray, labels: list) -> None:
     sys.stdout.write("\r" + line + " " * 5)
     sys.stdout.flush()
 
+@beartype
 def _pip_install(package: str) -> bool:
     if not _pip_available():
         console.print("[red]pip is not available – cannot install packages automatically.[/red]")
@@ -89,6 +91,7 @@ def _pip_install(package: str) -> bool:
 def rule(msg) -> None:
     console.rule(f"{msg}")
 
+@beartype
 def _in_virtual_env() -> bool:
     return (
         # virtualenv / venv
@@ -98,9 +101,11 @@ def _in_virtual_env() -> bool:
         or bool(os.environ.get("CONDA_PREFIX"))
     )
 
+@beartype
 def _pip_available() -> bool:
     return shutil.which("pip") is not None or util.find_spec("pip") is not None
 
+@beartype
 def _proxy_hint() -> None:
     if not (os.environ.get("HTTP_PROXY") or os.environ.get("HTTPS_PROXY")):
         console.print(
@@ -108,7 +113,7 @@ def _proxy_hint() -> None:
             "firewall, set HTTP_PROXY / HTTPS_PROXY or pass --proxy to pip.[/yellow]"
         )
 
-
+@beartype
 def _gpu_hint() -> None:
     if shutil.which("nvidia-smi"):
         console.print("[green]CUDA‑capable GPU detected via nvidia‑smi.[/green]")
@@ -123,7 +128,7 @@ def _gpu_hint() -> None:
             "CPU builds will run, but it will be slower than with GPU.[/yellow]"
         )
 
-
+@beartype
 def _platform_wheel_warning() -> None:
     sys_name = platform.system()
     arch = platform.machine().lower()
@@ -144,6 +149,7 @@ def _platform_wheel_warning() -> None:
             "not supported by official TensorFlow wheels.[/red]"
         )
 
+@beartype
 def install_tensorflow(full_argv: Optional[list] = None) -> Optional[ModuleType]:
     console.rule("[bold cyan]Checking for TensorFlow…[/bold cyan]")
 
@@ -352,23 +358,83 @@ def delete_tmp_files(json_file, bin_file) -> None:
             os.unlink(bin_file)
 
 @beartype
-def suggest_docker_installation() -> None:
-    system = platform.system()
+def is_docker_installed():
+    return shutil.which("docker") is not None
 
-    urls = {
-        'Linux': 'https://docs.docker.com/engine/install/',
-        'Darwin': 'https://docs.docker.com/docker-for-mac/install/',
-        'Windows': 'https://docs.docker.com/docker-for-windows/install/',
-    }
-
-    console.print("[red]✘ Docker is not installed. Please install it manually.[/red]")
-
-    url = urls.get(system)
-
-    if url:
-        console.print(f"[blue]See {system} on how to install it.[/blue]")
+@beartype
+def try_install_docker_linux():
+    if shutil.which('apt'):
+        print("🛠 Installing Docker with apt...")
+        subprocess.run(['sudo', 'apt', 'update'], check=True)
+        subprocess.run(['sudo', 'apt', 'install', '-y', 'docker.io'], check=True)
+    elif shutil.which('dnf'):
+        print("🛠 Installing Docker with dnf...")
+        subprocess.run(['sudo', 'dnf', 'install', '-y', 'docker'], check=True)
+    elif shutil.which('pacman'):
+        print("🛠 Installing Docker with pacman...")
+        subprocess.run(['sudo', 'pacman', '-Sy', '--noconfirm', 'docker'], check=True)
     else:
-        console.print("[red]Unsupported system. Please install Docker manually from https://docs.docker.com/[/red]")
+        print("❌ Unsupported Linux package manager.")
+        print("👉 Install manually: https://docs.docker.com/engine/install/")
+
+@beartype
+def try_install_docker_windows():
+    if not shutil.which('winget'):
+        print("❌ Winget not found. Install Docker manually:")
+        print("👉 https://docs.docker.com/docker-for-windows/install/")
+        return
+
+    print("🛠 Installing Docker Desktop using winget...")
+    try:
+        subprocess.run([
+            'winget', 'install', '--id', 'Docker.DockerDesktop',
+            '--source', 'winget',
+            '--accept-package-agreements',
+            '--accept-source-agreements'
+        ], check=True)
+        print("✅ Docker installation started. Please complete setup manually if needed.")
+    except subprocess.CalledProcessError as e:
+        print("❌ Docker installation failed. Manual install:")
+        print("👉 https://docs.docker.com/docker-for-windows/install/")
+        print(f"Details: {e}")
+
+@beartype
+def try_install_docker_mac():
+    if shutil.which("brew"):
+        print("🛠 Installing Docker via Homebrew...")
+        subprocess.run(['brew', 'install', '--cask', 'docker'], check=True)
+        print("✅ Docker installed. Please start Docker Desktop manually.")
+    else:
+        print("❌ Homebrew not found.")
+        print("👉 Install manually: https://docs.docker.com/docker-for-mac/install/")
+
+@beartype
+def try_install_docker():
+    if is_docker_installed():
+        print("✅ Docker is already installed.")
+        return True
+
+    system = platform.system()
+    print(f"🔍 Detected OS: {system}")
+
+    if system == 'Linux':
+        try_install_docker_linux()
+    elif system == 'Windows':
+        try_install_docker_windows()
+    elif system == 'Darwin':
+        try_install_docker_mac()
+    else:
+        print(f"❌ Unsupported OS: {system}")
+        print("👉 Install manually: https://docs.docker.com/get-docker/")
+        return False
+
+    if is_docker_installed():
+        print("✅ Docker installation successful.")
+        return True
+
+    print("⚠ Docker still not found. Please install manually:")
+    print("👉 https://docs.docker.com/get-docker/")
+    return False
 
 @beartype
 def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> bool:
@@ -414,9 +480,14 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
         return True
 
     if not _is_command_available('docker'):
-        suggest_docker_installation()
-        delete_tmp_files(tfjs_model_json, weights_bin)
-        return False
+        if not try_install_docker():
+            delete_tmp_files(tfjs_model_json, weights_bin)
+            return False
+
+        if not _is_command_available('docker'):
+            console.print("[red]✘ Installing Docker automatically failed.[/]")
+            delete_tmp_files(tfjs_model_json, weights_bin)
+            return False
 
     try:
         subprocess.run(['docker', 'info'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
