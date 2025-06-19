@@ -689,7 +689,7 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
         outline_width = 2
 
         # OpenCV-Bild (BGR → RGB → PIL)
-        image_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        image_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))  # pylint: disable=no-member
         draw = ImageDraw.Draw(image_pil)
         font = ImageFont.truetype(font_path, font_size)
 
@@ -712,7 +712,7 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
             draw.text((10, y), text, font=font, fill=fill_color)
 
         # Zurück in OpenCV (RGB → BGR)
-        frame = cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR)
+        frame = cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR)  # pylint: disable=no-member
 
     except Exception as e:
         print("Fehler beim Zeichnen mit TrueType-Font:", e)
