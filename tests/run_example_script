@@ -4,7 +4,7 @@ SCRIPT_DIR=$(dirname $(realpath "$0"))
 
 cd "$SCRIPT_DIR/example_script"
 
-python3 example.py
+python3 example.py slimer.png
 
 exit_code=$?
 
