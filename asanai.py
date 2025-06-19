@@ -437,6 +437,20 @@ def try_install_docker():
     return False
 
 @beartype
+def check_docker_and_try_to_install() -> None:
+    if not _is_command_available('docker'):
+        if not try_install_docker():
+            delete_tmp_files(tfjs_model_json, weights_bin)
+            return False
+
+        if not _is_command_available('docker'):
+            console.print("[red]✘ Installing Docker automatically failed.[/]")
+            delete_tmp_files(tfjs_model_json, weights_bin)
+            return False
+
+    return True
+
+@beartype
 def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> bool:
     keras_h5_file = 'model.h5'
 
@@ -479,15 +493,8 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
         delete_tmp_files(tfjs_model_json, weights_bin)
         return True
 
-    if not _is_command_available('docker'):
-        if not try_install_docker():
-            delete_tmp_files(tfjs_model_json, weights_bin)
-            return False
-
-        if not _is_command_available('docker'):
-            console.print("[red]✘ Installing Docker automatically failed.[/]")
-            delete_tmp_files(tfjs_model_json, weights_bin)
-            return False
+    if not check_docker_and_try_to_install():
+        return False
 
     try:
         subprocess.run(['docker', 'info'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
