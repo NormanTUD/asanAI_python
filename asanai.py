@@ -686,3 +686,32 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
             2,
         )
     return frame
+
+@beartype
+def get_shape(filename: str | Path) -> Optional[List[int]]:
+    path = Path(filename)
+    if not path.exists():
+        console.print(f"[red]Error:[/] File does not exist: {path}")
+        return None
+    if not path.is_file():
+        console.print(f"[red]Error:[/] Path is not a file: {path}")
+        return None
+
+    try:
+        with console.status(f"Reading shape from file: {path}", spinner="dots"):
+            with path.open("r") as f:
+                first_line = f.readline()
+            match = re.search(r"shape:\s*\((.*)\)", first_line)
+            if not match:
+                console.print(f"[yellow]Warning:[/] 'shape:' pattern not found in first line of {path}")
+                return None
+            # safe eval: convert tuple string like "3, 224, 224" to list of ints
+            shape_str = match.group(1)
+            shape_list = [int(x.strip()) for x in shape_str.split(",") if x.strip().isdigit()]
+            if not shape_list:
+                console.print(f"[yellow]Warning:[/] No valid integers found in shape in {path}")
+                return None
+            return shape_list
+    except Exception as e:
+        console.print(f"[red]Error reading shape from file {path}:[/] {e}")
+        return None
