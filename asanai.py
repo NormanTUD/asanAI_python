@@ -793,6 +793,13 @@ def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
             console.print("[yellow]You cancelled with CTRL C[/yellow]")
             sys.exit(1)
 
+        except ValueError as e:
+            console.print(f"[red]Failed to convert or reshape manual input to {expected_shape}: {e}. Please try again.[/red]")
+            continue
+        except TypeError as e:
+            console.print(f"[red]Invalid shape argument {expected_shape}: {e}. Please try again.[/red]")
+            continue
+
         values = user_input.split()
 
         if len(values) != total_values:
@@ -801,13 +808,6 @@ def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
 
         if not _is_float_list(values):
             console.print("[red]Input contains non-float values. Please try again.[/red]")
-            continue
-
-        except ValueError as e:
-            console.print(f"[red]Failed to convert or reshape manual input to {expected_shape}: {e}. Please try again.[/red]")
-            continue
-        except TypeError as e:
-            console.print(f"[red]Invalid shape argument {expected_shape}: {e}. Please try again.[/red]")
             continue
 
         return data
