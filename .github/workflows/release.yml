@@ -33,8 +33,24 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  deploy-to-pypi:
+  end-to-end-test:
     needs: [linter]
+    permissions:
+      contents: read
+    environment: Production
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.x'
+    - name: Install dependencies
+      run: |
+        ./tests/run_example_script
+
+  deploy-to-pypi:
+    needs: [end-to-end-test]
     permissions:
       contents: read
     environment: Production
