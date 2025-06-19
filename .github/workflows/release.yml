@@ -33,7 +33,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  end-to-end-test:
+  endtoendtest:
     needs: [linter]
     permissions:
       contents: read
@@ -50,7 +50,7 @@ jobs:
         ./tests/run_example_script
 
   deploy-to-pypi:
-    needs: [end-to-end-test]
+    needs: [endtoendtest]
     permissions:
       contents: read
     environment: Production
