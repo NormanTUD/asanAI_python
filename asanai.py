@@ -120,7 +120,7 @@ def _gpu_hint() -> None:
     else:
         console.print(
             "[yellow]No GPU detected (or drivers missing). "
-            "CPU builds will run, but training will be slower.[/yellow]"
+            "CPU builds will run, but it will be slower than with GPU.[/yellow]"
         )
 
 
