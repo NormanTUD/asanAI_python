@@ -144,7 +144,7 @@ def _platform_wheel_warning() -> None:
             "not supported by official TensorFlow wheels.[/red]"
         )
 
-def install_tensorflow(full_argv: list = []) -> Optional[ModuleType]:
+def install_tensorflow(full_argv: Optional[list] = None) -> Optional[ModuleType]:
     console.rule("[bold cyan]Checking for TensorFlow…[/bold cyan]")
 
     # Fast probe (avoids 3‑second heavy import cost if present)
@@ -204,7 +204,13 @@ def install_tensorflow(full_argv: list = []) -> Optional[ModuleType]:
 
     console.print("[green]TensorFlow installed successfully! Trying to restart the script automatically...[/green]")
 
-    os.execv(sys.executable, [sys.executable] + full_argv)
+    if full_argv is not None and isinstance(full_argv, list):
+        os.execv(sys.executable, [sys.executable] + full_argv)
+    else:
+        console.print("You need to manually restart your script after TensorFlow was installed.")
+        sys.exit(0)
+
+    return None
 
 @beartype
 def _newest_match(directory: Union[Path, str], pattern: str) -> Optional[Path]:
