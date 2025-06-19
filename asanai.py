@@ -91,22 +91,20 @@ def install_tensorflow() -> Optional[ModuleType]:
 
         try:
             tf = import_module("tensorflow")
+
             return tf
         except ModuleNotFoundError:
             console.print("[yellow]TensorFlow not found. Installation required.[/yellow]")
 
-        # 2. Check virtual environment
         if sys.prefix == sys.base_prefix:
             console.print("[red]Error: You need to be in a virtual environment to install TensorFlow.[/red]")
 
-        # 3. Try install tensorflow or tf_nightly
         if not _pip_install("tensorflow") and not _pip_install("tf_nightly"):
             console.print("[red]Cannot install TensorFlow via pip.[/red]")
 
             _pip_install("keras")
             _pip_install("tf_keras")
 
-        # 4. Tell user to restart the script
         console.print("[green]TensorFlow installed successfully! Run the script again, it should work now.[/green]")
 
         sys.exit(0)
