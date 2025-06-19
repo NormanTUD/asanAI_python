@@ -22,7 +22,7 @@ jobs:
       uses: actions/checkout@v4
     - name: Run linter
       run: |
-        ./tools/linter
+        ./tests/linter
 
     - name: Create a new version
       if: ${{ success() }}
@@ -53,7 +53,7 @@ jobs:
         pip install setuptools
     - name: Creating pyproject.toml
       run: |
-        bash tools/create_pyproject_toml ${{ github.run_number }}
+        bash tests/create_pyproject_toml ${{ github.run_number }}
     - name: Build package
       run: |
         python -m build
