@@ -27,7 +27,7 @@ except ModuleNotFoundError as e:
     print(f"Failed ot load module: {e}")
     sys.exit(1)
 
-init()
+init(autoreset=True)
 
 def dier (msg: Any) -> None:
     pprint(msg)
@@ -147,7 +147,6 @@ def _platform_wheel_warning() -> None:
 def install_tensorflow(full_argv: Optional[list] = None) -> Optional[ModuleType]:
     console.rule("[bold cyan]Checking for TensorFlow…[/bold cyan]")
 
-    # Fast probe (avoids 3‑second heavy import cost if present)
     with console.status("Fast-probing TensorFlow Module. Will load and return it if it exists."):
         if util.find_spec("tensorflow"):
             tf = import_module("tensorflow")  # full import only when needed
