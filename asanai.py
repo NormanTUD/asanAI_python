@@ -728,6 +728,20 @@ def get_shape(filename: str | Path) -> Optional[list[int]]:
         console.print(f"[red]I/O error reading file {path}:[/] {e}")
         return None
 
+
+@beartype
+def _exit_with_error(msg: str) -> None:
+    console.print(f"[bold red]ERROR:[/bold red] {msg}")
+    sys.exit(1)
+
+@beartype
+def _is_float_list(lst) -> bool:
+    try:
+        any(float(x) for x in lst)
+        return True
+    except ValueError:
+        return False
+
 @beartype
 def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
     input_shape = model.input_shape  # e.g. (None, 5, 10)
@@ -736,32 +750,21 @@ def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
     else:
         expected_shape = input_shape
 
-    def exit_with_error(msg: str):
-        console.print(f"[bold red]ERROR:[/bold red] {msg}")
-        sys.exit(1)
-
-    def is_float_list(lst) -> bool:
-        try:
-            any(float(x) for x in lst)
-            return True
-        except ValueError:
-            return False
-
     if os.path.isfile(filename):
         try:
             data = np.loadtxt(filename)
         except FileNotFoundError:
-            exit_with_error(f"File '{filename}' not found.")
+            _exit_with_error(f"File '{filename}' not found.")
         except IsADirectoryError:
-            exit_with_error(f"Expected a file but found a directory: '{filename}'.")
+            _exit_with_error(f"Expected a file but found a directory: '{filename}'.")
         except ValueError as e:
-            exit_with_error(f"Data format error in '{filename}': {e}")
+            _exit_with_error(f"Data format error in '{filename}': {e}")
         except OSError as e:
-            exit_with_error(f"I/O error while reading '{filename}': {e}")
+            _exit_with_error(f"I/O error while reading '{filename}': {e}")
 
         expected_size = np.prod(expected_shape)
         if data.size != expected_size:
-            exit_with_error(
+            _exit_with_error(
                 f"Data size mismatch. File contains {data.size} elements, "
                 f"but model expects input size {expected_size}."
             )
@@ -769,12 +772,12 @@ def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
         try:
             data = data.reshape(expected_shape)
         except ValueError as e:
-            exit_with_error(f"Cannot reshape data to {expected_shape}: {e}")
+            _exit_with_error(f"Cannot reshape data to {expected_shape}: {e}")
         except TypeError as e:
-            exit_with_error(f"Invalid shape argument {expected_shape}: {e}")
+            _exit_with_error(f"Invalid shape argument {expected_shape}: {e}")
 
         if not np.issubdtype(data.dtype, np.floating):
-            exit_with_error(f"Data type is not float, but {data.dtype}.")
+            _exit_with_error(f"Data type is not float, but {data.dtype}.")
 
         return data
 
@@ -795,14 +798,15 @@ def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
             console.print(f"[red]Incorrect number of values entered ({len(values)}), expected {total_values}. Please try again.[/red]")
             continue
 
-        if not is_float_list(values):
+        if not _is_float_list(values):
             console.print("[red]Input contains non-float values. Please try again.[/red]")
             continue
 
-        try:
-            data = np.array([float(x) for x in values]).reshape(expected_shape)
-        except Exception as e:
-            console.print(f"[red]Failed to reshape manual input to {expected_shape}: {e}. Please try again.[/red]")
+        except ValueError as e:
+            console.print(f"[red]Failed to convert or reshape manual input to {expected_shape}: {e}. Please try again.[/red]")
+            continue
+        except TypeError as e:
+            console.print(f"[red]Invalid shape argument {expected_shape}: {e}. Please try again.[/red]")
             continue
 
         return data
