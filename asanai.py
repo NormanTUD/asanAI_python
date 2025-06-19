@@ -54,12 +54,15 @@ def print_predictions_line(predictions: np.ndarray, labels: list) -> None:
     sys.stdout.flush()
 
 @beartype
-def _pip_install(package: str) -> bool:
+def _pip_install(package: str, quiet: bool = False) -> bool:
     if not _pip_available():
         console.print("[red]pip is not available – cannot install packages automatically.[/red]")
         return False
 
     cmd = [sys.executable, "-m", "pip", "install", package]
+    if quiet:
+        cmd.append("-q")
+
     try:
         with Progress(
             SpinnerColumn(),
@@ -295,7 +298,7 @@ def _is_command_available(cmd: str) -> bool:
 @beartype
 def _pip_install_tensorflowjs_converter_and_run_it(conversion_args: list) -> bool:
     if  not _is_command_available('tensorflowjs_converter'):
-        _pip_install("tensorflowjs")
+        _pip_install("tensorflowjs", True)
 
     if  _is_command_available('tensorflowjs_converter'):
         if _is_command_available('tensorflowjs_converter'):
