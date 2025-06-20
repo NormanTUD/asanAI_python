@@ -366,18 +366,18 @@ def is_docker_installed():
 @beartype
 def try_install_docker_linux():
     if shutil.which('apt'):
-        print("🛠 Installing Docker with apt...")
+        console.print("[yellow]🛠 Installing Docker with apt...[/yellow]")
         subprocess.run(['sudo', 'apt', 'update'], check=True)
         subprocess.run(['sudo', 'apt', 'install', '-y', 'docker.io'], check=True)
     elif shutil.which('dnf'):
-        print("🛠 Installing Docker with dnf...")
+        console.print("[yellow]🛠 Installing Docker with dnf...[/yellow]")
         subprocess.run(['sudo', 'dnf', 'install', '-y', 'docker'], check=True)
     elif shutil.which('pacman'):
-        print("🛠 Installing Docker with pacman...")
+        console.print("[yellow]🛠 Installing Docker with pacman...[/yellow]")
         subprocess.run(['sudo', 'pacman', '-Sy', '--noconfirm', 'docker'], check=True)
     else:
-        print("❌ Unsupported Linux package manager.")
-        print("👉 Install manually: https://docs.docker.com/engine/install/")
+        console.print("[red]❌ Unsupported Linux package manager.[/red]")
+        console.print("👉 Install manually: https://docs.docker.com/engine/install/")
 
 @beartype
 def try_install_docker_windows():
@@ -416,8 +416,17 @@ def try_install_docker():
         print("✅ Docker is already installed.")
         return True
 
+    answer = input("Do you want to try installing Docker? [y/j/yes]: ").strip().lower()
+
+    if not answer in {'y', 'j', 'yes'}:
+        console.print("[red]Docker is required. The script cannot continue without Docker.[/red]")
+
+        return False
+
+    console.print("[green]Proceeding with Docker installation. This may ask you for your user password...[/green]")
+
     system = platform.system()
-    print(f"🔍 Detected OS: {system}")
+    console.print(f"[yellow]🔍 Detected OS: {system}[/yellow]")
 
     if system == 'Linux':
         try_install_docker_linux()
