@@ -525,23 +525,44 @@ def update_wsl_if_windows() -> None:
     if platform.system() != "Windows":
         return
 
-    console.print("[bold green]Windows system detected.[/bold green] Checking for WSL support...")
+    console.print("[bold green]Windows system detected.[/bold green] Checking for WSL...")
 
     try:
-        subprocess.run(
-            ["wsl", "--status"], capture_output=True, text=True, check=True
-        )
-        console.print("[green]WSL appears to be installed.[/green]")
+        result = subprocess.run(["wsl", "--status"], capture_output=True, text=True, check=True)
+        console.print("[green]WSL is installed.[/green]")
     except FileNotFoundError:
-        console.print("[red]WSL is not installed or not in the system PATH.[/red] Please install WSL manually.")
+        console.print("[yellow]WSL is not installed or not in PATH. Attempting to install...[/yellow]")
+        try:
+            install_result = subprocess.run(["wsl", "--install"], capture_output=True, text=True, check=True)
+            console.print("[bold green]✅ WSL installation initiated successfully.[/bold green]")
+            console.print("[cyan]You may need to reboot your system to complete the installation.[/cyan]")
+        except subprocess.CalledProcessError as e:
+            console.print("[red]❌ Failed to install WSL:[/red]")
+            console.print(f"[red]{e.stderr.strip()}[/red]")
+        except Exception as e:
+            console.print(f"[red]❌ Unexpected error during WSL install: {str(e)}[/red]")
         return
     except subprocess.CalledProcessError as e:
-        console.print("[red]Error while retrieving WSL status:[/red]")
+        console.print("[red]❌ Error while checking WSL status:[/red]")
         console.print(f"[red]{e.stderr.strip()}[/red]")
         return
 
-    console.print("[bold yellow]⚠️  It is important to keep WSL up to date,[/bold yellow]")
-    console.print("[yellow]    as outdated versions can prevent Docker from running properly.[/yellow]")
+    # Check if update is available
+    console.print("[bold cyan]Checking if a WSL update is available...[/bold cyan]")
+    try:
+        check_update = subprocess.run(["wsl", "--update", "--status"], capture_output=True, text=True, check=True)
+        if "The installed version is the same as the latest version" in check_update.stdout:
+            console.print("[green]✅ WSL is already up to date.[/green]")
+            return
+        else:
+            console.print("[yellow]⚠ An update for WSL is available.[/yellow]")
+    except subprocess.CalledProcessError as e:
+        console.print("[red]Error checking WSL update status:[/red]")
+        console.print(f"[red]{e.stderr.strip()}[/red]")
+        return
+    except Exception as e:
+        console.print(f"[red]Unexpected error while checking for update: {str(e)}[/red]")
+        return
 
     if ask_yes_no("Do you want to run 'wsl --update' now? [y/j/yes]: "):
         try:
@@ -552,26 +573,18 @@ def update_wsl_if_windows() -> None:
             else:
                 console.print("[bold red]❌ Error during 'wsl --update':[/bold red]")
                 console.print(f"[red]{update.stderr.strip()}[/red]")
-        except subprocess.CalledProcessError as cpe:
-            # CalledProcessError: Command returned non-zero exit code
+        except subprocess.CalledProcessError as e:
             console.print("[bold red]❌ Error during 'wsl --update' command execution:[/bold red]")
-            console.print(f"[red]{cpe.stderr.strip() if cpe.stderr else str(cpe)}[/red]")
-
-        except FileNotFoundError as fnf_error:
-            # Executable 'wsl' not found
+            console.print(f"[red]{e.stderr.strip() if e.stderr else str(e)}[/red]")
+        except FileNotFoundError as e:
             console.print("[bold red]❌ 'wsl' executable not found. Is WSL installed?[/bold red]")
-            console.print(f"[red]{str(fnf_error)}[/red]")
-
-        except subprocess.TimeoutExpired as timeout_error:
-            # If you decide to add a timeout in future
+            console.print(f"[red]{str(e)}[/red]")
+        except subprocess.TimeoutExpired as e:
             console.print("[bold red]❌ 'wsl --update' command timed out.[/bold red]")
-            console.print(f"[red]{str(timeout_error)}[/red]")
-
-        except OSError as os_error:
-            # Other OS errors (permissions, resource limits)
+            console.print(f"[red]{str(e)}[/red]")
+        except OSError as e:
             console.print("[bold red]❌ OS error occurred while running 'wsl --update':[/bold red]")
-            console.print(f"[red]{str(os_error)}[/red]")
-
+            console.print(f"[red]{str(e)}[/red]")
     else:
         console.print("[yellow]Update cancelled. WSL remains unchanged.[/yellow]")
 
