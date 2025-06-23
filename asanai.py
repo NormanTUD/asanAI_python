@@ -515,9 +515,18 @@ def try_install_docker_mac() -> None:
     try:
         if shutil.which("brew"):
             console.print("[yellow]🛠 Installing Docker via Homebrew...[/yellow]")
+
+            env = os.environ.copy()
+            env["NONINTERACTIVE"] = "1"
+
             result = subprocess.run(
                 ['brew', 'install', '--cask', 'docker'],
-                check=False, capture_output=True, text=True)
+                check=False,
+                capture_output=True,
+                text=True,
+                env=env
+            )
+
             if result.returncode == 0:
                 console.print("[green]✅ Docker installed. Please start Docker Desktop manually.[/green]")
             else:
@@ -550,6 +559,7 @@ def try_install_docker_mac() -> None:
 
                     console.print("[yellow]🛠 Running Homebrew install script...[/yellow]")
 
+                    env = os.environ.copy()
                     env["NONINTERACTIVE"] = "1"
 
                     install_result = subprocess.run(
@@ -557,7 +567,9 @@ def try_install_docker_mac() -> None:
                         shell=False,
                         check=False,
                         capture_output=True,
-                        text=True)
+                        text=True,
+                        env=env
+                    )
 
                     if install_result.returncode == 0:
                         console.print("[green]✅ Homebrew installed successfully.[/green]")
