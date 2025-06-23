@@ -558,6 +558,45 @@ def check_docker_and_try_to_install(tfjs_model_json: str, weights_bin: str) -> b
     return True
 
 @beartype
+def is_windows() -> None:
+    return platform.system().lower() == "windows"
+
+@beartype
+def get_program_files() -> None:
+    return os.environ.get("ProgramW6432") or os.environ.get("ProgramFiles")
+
+@beartype
+def is_docker_running() -> bool:
+    for proc in psutil.process_iter(['name']):
+        if proc.info['name'] and "Docker Desktop.exe" in proc.info['name']:
+            return True
+    return False
+
+@beartype
+def start_docker() -> int:
+    pf = get_program_files()
+    if not pf:
+        return 2
+
+    path = os.path.join(pf, "Docker", "Docker", "Docker Desktop.exe")
+    if not os.path.isfile(path):
+        return 3
+
+    try:
+        subprocess.Popen([path], shell=False)
+        return 0
+    except Exception:
+        return 4
+
+@beartype
+def start_docker_if_not_running() -> bool:
+    if not is_windows():
+        return True
+    if is_docker_running():
+        return False
+    return start_docker()
+
+@beartype
 def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> bool:
     keras_h5_file = 'model.h5'
 
@@ -602,6 +641,8 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
 
     if not check_docker_and_try_to_install(tfjs_model_json, weights_bin):
         return False
+
+    start_docker_if_not_running()
 
     try:
         subprocess.run(['docker', 'info'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
