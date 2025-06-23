@@ -19,6 +19,7 @@ try:
     import urllib.request
     import urllib.error
     import psutil
+    import unicodedata
 
     from colorama import Style, Fore, Back, init
     import numpy as np
@@ -207,12 +208,16 @@ def run_installer(installer_path: str) -> bool:
         return False
 
 @beartype
+def normalize_input(text: str) -> str:
+    return unicodedata.normalize("NFKC", text).strip().lower()
+
+@beartype
 def ask_yes_no(prompt) -> bool:
     if os.environ.get("CI") is not None:
         return True
 
     while True:
-        answer = Prompt.ask(prompt, default="no").strip().lower()
+        answer = normalize_input(Prompt.ask(prompt, default="no")).strip().lower()
 
         console.print(f"Answer: {answer}")
 
