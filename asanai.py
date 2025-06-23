@@ -31,6 +31,7 @@ try:
     from rich.prompt import Prompt
     from rich.progress import SpinnerColumn, Progress, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn
     from rich.text import Text
+    from rich.markup import escape
     from beartype import beartype
 except ModuleNotFoundError as e:
     print(f"Failed ot load module: {e}")
