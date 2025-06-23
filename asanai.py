@@ -15,6 +15,7 @@ try:
     import platform
     import traceback
     import urllib.request
+    import urllib.error
 
     from colorama import Style, Fore, Back, init
     import numpy as np
