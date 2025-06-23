@@ -575,8 +575,29 @@ def update_wsl_if_windows() -> None:
         console.print("[red]Error checking WSL update status:[/red]")
         console.print(f"[red]{e.stderr.strip()}[/red]")
         return
-    except Exception as e:
-        console.print(f"[red]Unexpected error while checking for update: {str(e)}[/red]")
+    except FileNotFoundError as e:
+        console.print("[red]❌ 'wsl' command not found. Ensure WSL is installed and available in PATH.[/red]")
+        console.print(f"[red]{str(e)}[/red]")
+        return
+
+    except PermissionError as e:
+        console.print("[red]❌ Permission denied. You may need to run this script as administrator.[/red]")
+        console.print(f"[red]{str(e)}[/red]")
+        return
+
+    except subprocess.CalledProcessError as e:
+        console.print("[red]❌ Error checking WSL update status:[/red]")
+        console.print(f"[red]Exit code: {e.returncode}[/red]")
+        console.print(f"[red]Command: {' '.join(e.cmd)}[/red]")
+        if e.stderr:
+            console.print(f"[red]Error Output: {e.stderr.strip()}[/red]")
+        else:
+            console.print("[red]No error output available.[/red]")
+        return
+
+    except OSError as e:
+        console.print("[red]❌ Operating system error occurred while checking for WSL updates.[/red]")
+        console.print(f"[red]{str(e)}[/red]")
         return
 
     if ask_yes_no("Do you want to run 'wsl --update' now? [y/j/yes]: "):
