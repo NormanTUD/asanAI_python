@@ -26,7 +26,7 @@ def create_and_setup_venv():
     print(f"Creating virtualenv at {VENV_PATH}")
     venv.create(VENV_PATH, with_pip=True)
     subprocess.check_call([PYTHON_BIN, "-m", "pip", "install", "--upgrade", "pip"])
-    subprocess.check_call([PYTHON_BIN, "-m", "pip", "install", "asanai"])
+    subprocess.check_call([PYTHON_BIN, "-m", "pip", "install", "git+https://github.com/NormanTUD/asanAI_python.git"])
 
 def restart_with_venv():
     os.execv(PYTHON_BIN, [str(PYTHON_BIN)] + sys.argv)
