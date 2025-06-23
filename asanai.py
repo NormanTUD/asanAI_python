@@ -208,6 +208,9 @@ def run_installer(installer_path: str) -> bool:
 
 @beartype
 def ask_yes_no(prompt) -> bool:
+    if os.environ.get("CI") is not None:
+        return True
+
     while True:
         answer = Prompt.ask(prompt, default="no").strip().lower()
 
