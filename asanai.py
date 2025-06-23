@@ -658,7 +658,7 @@ def start_docker() -> int:
 
     try:
         # Use 'with' to ensure resource cleanup, though Docker Desktop runs asynchronously.
-        with subprocess.Popen([path], shell=False) as process:
+        with subprocess.Popen([path], shell=False):
             # Not waiting for process completion to avoid blocking,
             # just start the process and immediately return success.
             return 0
