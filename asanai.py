@@ -14,6 +14,7 @@ try:
     from types import ModuleType
     import platform
     import traceback
+    import urllib.request
 
     from colorama import Style, Fore, Back, init
     import numpy as np
@@ -178,11 +179,19 @@ def run_installer(installer_path: str) -> bool:
         if result.returncode == 0:
             print("Installation completed successfully.")
             return True
-        else:
-            print(f"Installation failed with error code {result.returncode}")
-            return False
-    except Exception as e:
-        print(f"Error while running the installer: {e}")
+
+        print(f"Installation failed with error code {result.returncode}")
+        return False
+    except FileNotFoundError as e:
+        print(f"Installer file not found: {e}")
+        return False
+
+    except PermissionError as e:
+        print(f"Permission denied when running installer: {e}")
+        return False
+
+    except subprocess.SubprocessError as e:
+        print(f"Subprocess error while running installer: {e}")
         return False
 
 @beartype
