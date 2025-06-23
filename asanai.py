@@ -153,6 +153,62 @@ def _platform_wheel_warning() -> None:
             "not supported by official TensorFlow wheels.[/red]"
         )
 
+
+@beartype
+def download_file(url: str, dest_path: str) -> bool:
+    try:
+        with urllib.request.urlopen(url) as response:
+            if response.status != 200:
+                print(f"Error: Server responded with status {response.status}")
+                return False
+            data = response.read()
+            with open(dest_path, 'wb') as file:
+                file.write(data)
+        print(f"File successfully downloaded: {dest_path}")
+        return True
+    except Exception as e:
+        print(f"Error while downloading: {e}")
+        return False
+
+@beartype
+def run_installer(installer_path: str) -> bool:
+    try:
+        # subprocess.run waits for the process to finish
+        result = subprocess.run([installer_path, '/install', '/quiet', '/norestart'], check=False)
+        if result.returncode == 0:
+            print("Installation completed successfully.")
+            return True
+        else:
+            print(f"Installation failed with error code {result.returncode}")
+            return False
+    except Exception as e:
+        print(f"Error while running the installer: {e}")
+        return False
+
+@beartype
+def download_and_install_ms_visual_cpp() -> None:
+    url = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+    filename = "vc_redist.x64.exe"
+    filepath = os.path.join(os.getcwd(), filename)
+
+    print("This Visual C++ Redistributable package is required for TensorFlow to work properly.")
+    user_input = input("Do you want to download and install it now? (yes/no): ").strip().lower()
+    if user_input not in ("yes", "y", "j"):
+        print("Operation cancelled by user.")
+        sys.exit(0)
+
+    print("Starting file download...")
+    success = download_file(url, filepath)
+    if not success:
+        print("Download failed, aborting.")
+        sys.exit(1)
+
+    print("Starting installation...")
+    success = run_installer(filepath)
+    if not success:
+        print("Installation failed.")
+        sys.exit(1)
+
 @beartype
 def install_tensorflow(full_argv: Optional[list] = None) -> Optional[ModuleType]:
     console.rule("[bold cyan]Checking for TensorFlow…[/bold cyan]")
@@ -177,6 +233,9 @@ def install_tensorflow(full_argv: Optional[list] = None) -> Optional[ModuleType]
 
     # Choose package name based on platform
     pkg_name = "tensorflow"
+    if platform.system() == "Windows":
+        download_and_install_ms_visual_cpp()
+
     if platform.system() == "Darwin" and platform.machine().lower() in {"arm64", "aarch64"}:
         pkg_name = "tensorflow-macos"
 
