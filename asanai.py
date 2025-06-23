@@ -208,9 +208,9 @@ def ask_yes_no(prompt) -> bool:
     while True:
         answer = Prompt.ask(prompt, default="no").strip().lower()
 
-        if answer in ['yes', 'y', 'j']:  # include 'j' if you want (for German 'ja')
+        if answer in ['yes', 'y', 'j']:
             return True
-        elif answer in ['no', 'n']:
+        elif answer in ['no', 'n', 'nein']:
             return False
 
         console.print("[red]Please answer with 'yes', 'y' or 'no', 'n'.[/red]")
