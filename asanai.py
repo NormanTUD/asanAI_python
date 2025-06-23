@@ -521,7 +521,7 @@ def try_install_docker_mac():
         print("👉 Install manually: https://docs.docker.com/docker-for-mac/install/")
 
 @beartype
-def update_wsl_if_windows() -> None:
+def update_wsl_if_windows() -> None: # pylint: disable=too-many-branches
     if platform.system() != "Windows":
         return
 
@@ -571,10 +571,7 @@ def update_wsl_if_windows() -> None:
             console.print("[green]✅ WSL is already up to date.[/green]")
             return
         console.print("[yellow]⚠ An update for WSL is available.[/yellow]")
-    except subprocess.CalledProcessError as e:
-        console.print("[red]Error checking WSL update status:[/red]")
-        console.print(f"[red]{e.stderr.strip()}[/red]")
-        return
+
     except FileNotFoundError as e:
         console.print("[red]❌ 'wsl' command not found. Ensure WSL is installed and available in PATH.[/red]")
         console.print(f"[red]{str(e)}[/red]")
