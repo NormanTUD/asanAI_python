@@ -559,10 +559,6 @@ def update_wsl_if_windows() -> None:
             console.print("[bold red]❌ OS error occurred while running 'wsl --update':[/bold red]")
             console.print(f"[red]{str(os_error)}[/red]")
 
-        except Exception as ex:
-            # Catch-all for unexpected exceptions - this should rarely happen
-            console.print("[bold red]❌ Unexpected error while executing 'wsl --update':[/bold red]")
-            console.print(f"[red]{str(ex)}[/red]")
     else:
         console.print("[yellow]Update cancelled. WSL remains unchanged.[/yellow]")
 
@@ -653,7 +649,24 @@ def start_docker() -> int:
     try:
         subprocess.Popen([path], shell=False)
         return 0
-    except Exception:
+    except FileNotFoundError as fnf_error:
+        console.print(f"[bold red]❌ File or executable not found:[/bold red] {path}")
+        console.print(f"[red]{str(fnf_error)}[/red]")
+        return 4
+
+    except PermissionError as perm_error:
+        console.print(f"[bold red]❌ Permission denied to execute:[/bold red] {path}")
+        console.print(f"[red]{str(perm_error)}[/red]")
+        return 4
+
+    except OSError as os_error:
+        console.print(f"[bold red]❌ OS error occurred while trying to launch:[/bold red] {path}")
+        console.print(f"[red]{str(os_error)}[/red]")
+        return 4
+
+    except ValueError as val_error:
+        console.print(f"[bold red]❌ Invalid argument passed to Popen for:[/bold red] {path}")
+        console.print(f"[red]{str(val_error)}[/red]")
         return 4
 
 @beartype
