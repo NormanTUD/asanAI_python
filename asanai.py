@@ -414,7 +414,10 @@ def _pip_install_tensorflowjs_converter_and_run_it(conversion_args: list) -> boo
         else:
             console.print("[yellow]⚠ tensorflowjs_converter CLI not found locally.[/]")
     else:
-        console.print("[yellow]⚠ Installing tensorflowjs module failed. Trying to fall back to docker. This can take some time, but only has to be done once.[/]")
+        if platform.system() == "Windows":
+            console.print("[yellow]⚠ Installing tensorflowjs module failed. Trying to fall back to docker. This can take some time, but only has to be done once. Start docker-desktop once before restarting the new cmd.[/]")
+        else:
+            console.print("[yellow]⚠ Installing tensorflowjs module failed. Trying to fall back to docker. This can take some time, but only has to be done once.[/]")
 
     return False
 
