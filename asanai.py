@@ -528,12 +528,12 @@ def update_wsl_if_windows() -> None:
     console.print("[bold green]Windows system detected.[/bold green] Checking for WSL...")
 
     try:
-        result = subprocess.run(["wsl", "--status"], capture_output=True, text=True, check=True)
+        subprocess.run(["wsl", "--status"], capture_output=True, text=True, check=True)
         console.print("[green]WSL is installed.[/green]")
     except FileNotFoundError:
         console.print("[yellow]WSL is not installed or not in PATH. Attempting to install...[/yellow]")
         try:
-            install_result = subprocess.run(["wsl", "--install"], capture_output=True, text=True, check=True)
+            subprocess.run(["wsl", "--install"], capture_output=True, text=True, check=True)
             console.print("[bold green]✅ WSL installation initiated successfully.[/bold green]")
             console.print("[cyan]You may need to reboot your system to complete the installation.[/cyan]")
         except subprocess.CalledProcessError as e:
@@ -554,8 +554,7 @@ def update_wsl_if_windows() -> None:
         if "The installed version is the same as the latest version" in check_update.stdout:
             console.print("[green]✅ WSL is already up to date.[/green]")
             return
-        else:
-            console.print("[yellow]⚠ An update for WSL is available.[/yellow]")
+        console.print("[yellow]⚠ An update for WSL is available.[/yellow]")
     except subprocess.CalledProcessError as e:
         console.print("[red]Error checking WSL update status:[/red]")
         console.print(f"[red]{e.stderr.strip()}[/red]")
