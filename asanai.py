@@ -1161,7 +1161,7 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
         ]
         font_path = next((fp for fp in font_path_candidates if os.path.exists(fp)), None)
         if font_path is None:
-            raise FileNotFoundError("Kein gültiger TrueType-Font (Arial/DejaVuSans) gefunden.")
+            raise FileNotFoundError("No valid Font found (Arial/DejaVuSans).")
 
         font_size = 20
         outline_width = 2
