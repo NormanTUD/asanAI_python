@@ -507,6 +507,44 @@ def try_install_docker_mac():
         print("👉 Install manually: https://docs.docker.com/docker-for-mac/install/")
 
 @beartype
+def update_wsl_if_windows() -> None:
+    if platform.system() != "Windows":
+        return
+
+    console.print("[bold green]Windows system detected.[/bold green] Checking for WSL support...")
+
+    try:
+        result = subprocess.run(
+            ["wsl", "--status"], capture_output=True, text=True, check=True
+        )
+        console.print("[green]WSL appears to be installed.[/green]")
+    except FileNotFoundError:
+        console.print("[red]WSL is not installed or not in the system PATH.[/red] Please install WSL manually.")
+        return
+    except subprocess.CalledProcessError as e:
+        console.print("[red]Error while retrieving WSL status:[/red]")
+        console.print(f"[red]{e.stderr.strip()}[/red]")
+        return
+
+    console.print("[bold yellow]⚠️  It is important to keep WSL up to date,[/bold yellow]")
+    console.print("[yellow]    as outdated versions can prevent Docker from running properly.[/yellow]")
+
+    if ask_yes_no("Do you want to run 'wsl --update' now? [y/j/yes]: "):
+        try:
+            console.print("\n[bold cyan]Running 'wsl --update'...[/bold cyan]")
+            update = subprocess.run(["wsl", "--update"], capture_output=True, text=True)
+            if update.returncode == 0:
+                console.print("[bold green]✅ WSL was successfully updated.[/bold green]")
+            else:
+                console.print("[bold red]❌ Error during 'wsl --update':[/bold red]")
+                console.print(f"[red]{update.stderr.strip()}[/red]")
+        except Exception as ex:
+            console.print("[bold red]Unexpected error while executing 'wsl --update':[/bold red]")
+            console.print(f"[red]{str(ex)}[/red]")
+    else:
+        console.print("[yellow]Update cancelled. WSL remains unchanged.[/yellow]")
+
+@beartype
 def try_install_docker():
     if is_docker_installed():
         print("✅ Docker is already installed.")
@@ -638,6 +676,8 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
     if _pip_install_tensorflowjs_converter_and_run_it(conversion_args):
         delete_tmp_files(tfjs_model_json, weights_bin)
         return True
+
+    update_wsl_if_windows()
 
     if not check_docker_and_try_to_install(tfjs_model_json, weights_bin):
         return False
