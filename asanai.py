@@ -638,32 +638,42 @@ def is_docker_running() -> bool:
 
 @beartype
 def start_docker() -> int:
+    """
+    Attempts to start Docker Desktop.exe from the Program Files directory.
+    Returns:
+        0 - Success
+        2 - Program Files path not found
+        3 - Docker Desktop.exe not found
+        4 - Other errors (permission, OS, file not found, value error)
+    """
     pf = get_program_files()
     if not pf:
+        console.print("[bold red]❌ Program Files directory not found.[/bold red]")
         return 2
 
     path = os.path.join(pf, "Docker", "Docker", "Docker Desktop.exe")
     if not os.path.isfile(path):
+        console.print(f"[bold red]❌ Docker Desktop executable not found at:[/bold red] {path}")
         return 3
 
     try:
-        subprocess.Popen([path], shell=False)
-        return 0
+        # Use 'with' to ensure resource cleanup, though Docker Desktop runs asynchronously.
+        with subprocess.Popen([path], shell=False) as process:
+            # Not waiting for process completion to avoid blocking,
+            # just start the process and immediately return success.
+            return 0
     except FileNotFoundError as fnf_error:
         console.print(f"[bold red]❌ File or executable not found:[/bold red] {path}")
         console.print(f"[red]{str(fnf_error)}[/red]")
         return 4
-
     except PermissionError as perm_error:
         console.print(f"[bold red]❌ Permission denied to execute:[/bold red] {path}")
         console.print(f"[red]{str(perm_error)}[/red]")
         return 4
-
     except OSError as os_error:
         console.print(f"[bold red]❌ OS error occurred while trying to launch:[/bold red] {path}")
         console.print(f"[red]{str(os_error)}[/red]")
         return 4
-
     except ValueError as val_error:
         console.print(f"[bold red]❌ Invalid argument passed to Popen for:[/bold red] {path}")
         console.print(f"[red]{str(val_error)}[/red]")
