@@ -485,6 +485,9 @@ def try_install_docker_windows():
             '--accept-source-agreements'
         ], check=True)
         print("✅ Docker installation started. Please complete setup manually if needed.")
+        print("✅ Please restart the cmd on Windows and restart script manually.")
+        sys.exit(0)
+
     except subprocess.CalledProcessError as e:
         print("❌ Docker installation failed. Manual install:")
         print("👉 https://docs.docker.com/docker-for-windows/install/")
