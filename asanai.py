@@ -511,58 +511,67 @@ def try_install_docker_windows():
 
 @beartype
 def try_install_docker_mac() -> None:
-    """
-    Versucht Docker auf macOS über Homebrew zu installieren.
-    Falls Homebrew nicht gefunden wird, wird gefragt, ob Homebrew installiert werden soll.
-    """
     try:
         if shutil.which("brew"):
-            print("🛠️ Installing Docker via Homebrew...")
-            result = subprocess.run(['brew', 'install', '--cask', 'docker'], check=False, capture_output=True, text=True)
+            console.print("[yellow]🛠 Installing Docker via Homebrew...[/yellow]")
+            result = subprocess.run(
+                ['brew', 'install', '--cask', 'docker'],
+                check=False, capture_output=True, text=True)
             if result.returncode == 0:
-                print("✅ Docker installed. Please start Docker Desktop manually.")
+                console.print("[green]✅ Docker installed. Please start Docker Desktop manually.[/green]")
             else:
-                print("❌ Failed to install Docker via Homebrew.")
-                print(f"Output: {result.stdout}")
-                print(f"Error: {result.stderr}")
+                console.print("[red]❌ Failed to install Docker via Homebrew.[/red]")
+                console.print(f"[blue]Output:[/blue] {escape(result.stdout)}")
+                console.print(f"[blue]Error:[/blue] {escape(result.stderr)}")
         else:
-            print("❌ Homebrew not found.")
-            should_install_brew = ask_yes_no("Do you want to install Homebrew now? (yes/no)")
-            if should_install_brew:
-                print("🛠️ Installing Homebrew...")
-                try:
-                    # Homebrew Install-Script ausführen
-                    # Offizielle Anleitung: https://brew.sh
-                    install_cmd = (
-                        '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
-                    )
-                    # subprocess.run in Shell, da komplexer Befehl
-                    install_result = subprocess.run(install_cmd, shell=True, check=False, capture_output=True, text=True)
+            console.print("[red]❌ Homebrew not found.[/red]")
+            if ask_yes_no("Do you want to install Homebrew now? (yes/no)"):
+                console.print("[yellow]🛠 Downloading Homebrew install script...[/yellow]")
+
+                with tempfile.TemporaryDirectory() as tmpdirname:
+                    script_path = os.path.join(tmpdirname, 'install_homebrew.sh')
+
+                    curl_result = subprocess.run(
+                        ['curl', '-fsSL', 'https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh', '-o', script_path],
+                        check=False, capture_output=True, text=True)
+
+                    if curl_result.returncode != 0:
+                        console.print("[red]❌ Failed to download Homebrew install script.[/red]")
+                        console.print(f"[blue]curl stdout:[/blue] {escape(curl_result.stdout)}")
+                        console.print(f"[blue]curl stderr:[/blue] {escape(curl_result.stderr)}")
+                        return
+
+                    os.chmod(script_path, 0o755)
+
+                    console.print("[yellow]🛠 Running Homebrew install script...[/yellow]")
+                    install_result = subprocess.run(
+                        [script_path],
+                        shell=False,
+                        check=False,
+                        capture_output=True,
+                        text=True)
+
                     if install_result.returncode == 0:
-                        print("✅ Homebrew installed successfully.")
-                        # Homebrew in PATH laden für diese Session (muss je nach Shell angepasst werden)
-                        brew_path = "/opt/homebrew/bin/brew"  # Für Apple Silicon Mac
+                        console.print("[green]✅ Homebrew installed successfully.[/green]")
+                        brew_path = "/opt/homebrew/bin/brew"
                         if os.path.exists(brew_path):
                             os.environ["PATH"] = brew_path + os.pathsep + os.environ.get("PATH", "")
                         else:
-                            # Fallback Pfad für Intel Macs
                             brew_path = "/usr/local/bin/brew"
                             if os.path.exists(brew_path):
                                 os.environ["PATH"] = brew_path + os.pathsep + os.environ.get("PATH", "")
-                        # Nochmal versuchen Docker zu installieren
+
                         try_install_docker_mac()
                     else:
-                        print("❌ Homebrew installation failed.")
-                        print(f"Output: {install_result.stdout}")
-                        print(f"Error: {install_result.stderr}")
-                except (OSError, subprocess.SubprocessError) as ex:
-                    print(f"❌ Exception while installing Homebrew: {ex}")
+                        console.print("[red]❌ Homebrew installation failed.[/red]")
+                        console.print(f"[blue]Output:[/blue] {escape(install_result.stdout)}")
+                        console.print(f"[blue]Error:[/blue] {escape(install_result.stderr)}")
             else:
-                print("👉 Please install Homebrew manually: https://brew.sh")
+                console.print("[blue]👉 Please install Homebrew manually: https://brew.sh[/blue]")
     except subprocess.CalledProcessError as e:
-        print(f"❌ CalledProcessError: {e}")
+        console.print(f"[red]❌ CalledProcessError: {escape(str(e))}[/red]")
     except (OSError, subprocess.SubprocessError) as e:
-        print(f"❌ Unexpected error: {e}")
+        console.print(f"[red]❌ Unexpected error: {escape(str(e))}[/red]")
 
 @beartype
 def update_wsl_if_windows() -> None: # pylint: disable=too-many-branches
