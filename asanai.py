@@ -601,8 +601,11 @@ def is_windows() -> bool:
     return platform.system().lower() == "windows"
 
 @beartype
-def get_program_files() -> None:
-    return os.environ.get("ProgramW6432") or os.environ.get("ProgramFiles")
+def get_program_files() -> str:
+    if os.environ.get("ProgramW6432"):
+        return os.environ.get("ProgramW6432")
+
+    return os.environ.get("ProgramFiles")
 
 @beartype
 def is_docker_running() -> bool:
