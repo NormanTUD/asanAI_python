@@ -16,6 +16,7 @@ try:
     import traceback
     import urllib.request
     import urllib.error
+    import psutil
 
     from colorama import Style, Fore, Back, init
     import numpy as np
@@ -514,7 +515,7 @@ def update_wsl_if_windows() -> None:
     console.print("[bold green]Windows system detected.[/bold green] Checking for WSL support...")
 
     try:
-        result = subprocess.run(
+        subprocess.run(
             ["wsl", "--status"], capture_output=True, text=True, check=True
         )
         console.print("[green]WSL appears to be installed.[/green]")
@@ -532,7 +533,7 @@ def update_wsl_if_windows() -> None:
     if ask_yes_no("Do you want to run 'wsl --update' now? [y/j/yes]: "):
         try:
             console.print("\n[bold cyan]Running 'wsl --update'...[/bold cyan]")
-            update = subprocess.run(["wsl", "--update"], capture_output=True, text=True)
+            update = subprocess.run(["wsl", "--update"], capture_output=True, text=True, check=True)
             if update.returncode == 0:
                 console.print("[bold green]✅ WSL was successfully updated.[/bold green]")
             else:
