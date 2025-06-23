@@ -1193,7 +1193,7 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
         frame = cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR)  # pylint: disable=no-member
 
     except (OSError, FileNotFoundError, ValueError, AttributeError, TypeError) as specific_err:
-        print("Spezifischer Fehler beim Zeichnen mit TrueType-Font:", specific_err)
+        print("Error while drawing with Truetype-Font:", specific_err)
         traceback.print_exc()
 
         # Fallback mit cv2.putText
