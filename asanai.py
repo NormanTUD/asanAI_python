@@ -817,8 +817,6 @@ def extract_zip_file(zip_path: str) -> None:
         console.print(f"[green]Successfully extracted:[/green] {zip_path}")
     except zipfile.BadZipFile:
         console.print(f"[bold red]Invalid ZIP file:[/bold red] {zip_path}")
-    except zipfile.BadZipFile:
-        console.print(f"[bold red]Invalid ZIP file:[/bold red] {zip_path}")
     except zipfile.LargeZipFile:
         console.print(f"[bold red]ZIP file requires ZIP64 support:[/bold red] {zip_path}")
     except FileNotFoundError:
