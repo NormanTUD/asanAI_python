@@ -23,6 +23,7 @@ try:
     from skimage import transform
     from PIL import Image, UnidentifiedImageError, ImageDraw, ImageFont
     from rich.console import Console
+    from rich.prompt import Prompt
     from rich.progress import SpinnerColumn, Progress, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn
     from rich.text import Text
     from beartype import beartype
@@ -206,12 +207,13 @@ def run_installer(installer_path: str) -> bool:
 def ask_yes_no(prompt) -> bool:
     while True:
         answer = Prompt.ask(prompt, default="no").strip().lower()
+
         if answer in ['yes', 'y', 'j']:  # include 'j' if you want (for German 'ja')
             return True
         elif answer in ['no', 'n']:
             return False
-        else:
-            console.print("[red]Please answer with 'yes', 'y' or 'no', 'n'.[/red]")
+
+        console.print("[red]Please answer with 'yes', 'y' or 'no', 'n'.[/red]")
 
 @beartype
 def download_and_install_ms_visual_cpp() -> None:
