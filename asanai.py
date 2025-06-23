@@ -237,7 +237,7 @@ def download_and_install_ms_visual_cpp() -> None:
 
     print("This Visual C++ Redistributable package is required for TensorFlow to work properly.")
     continue_install = ask_yes_no("Do you want to download and install it now? (yes/j/y/no): ")
-    if continue_install:
+    if not continue_install:
         print("Operation cancelled by user.")
         sys.exit(0)
 
