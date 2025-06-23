@@ -1,4 +1,4 @@
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-lines,too-many-branches,too-many-nested-blocks
 
 import sys
 
@@ -557,13 +557,13 @@ def try_install_docker_mac() -> None:
                         print("❌ Homebrew installation failed.")
                         print(f"Output: {install_result.stdout}")
                         print(f"Error: {install_result.stderr}")
-                except Exception as ex:
+                except (OSError, subprocess.SubprocessError) as ex:
                     print(f"❌ Exception while installing Homebrew: {ex}")
             else:
                 print("👉 Please install Homebrew manually: https://brew.sh")
     except subprocess.CalledProcessError as e:
         print(f"❌ CalledProcessError: {e}")
-    except Exception as e:
+    except (OSError, subprocess.SubprocessError) as e:
         print(f"❌ Unexpected error: {e}")
 
 @beartype
