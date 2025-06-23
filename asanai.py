@@ -936,6 +936,11 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
     if not os.path.exists(original_tfjs_model_json) or not os.path.exists(original_weights_bin):
         find_and_extract_model_zip_file_if_exists()
 
+        files = find_model_files(directory)
+
+        original_tfjs_model_json = str(files.get("model.json"))
+        original_weights_bin = str(files.get("model.weights.bin"))
+
     if not os.path.exists(original_tfjs_model_json) or not os.path.exists(original_weights_bin):
         console.print("[red]No model.json and/or model.weights.bin found. Cannot continue. Have you downloaded the models from asanAI? If not, do so and put them in the same folder as your script.[/red]")
         sys.exit(1)
