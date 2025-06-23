@@ -758,7 +758,7 @@ def find_model_zip(base_name: str = "model", extension: str = ".zip") -> Optiona
         return direct
 
     pattern = re.compile(rf"^{re.escape(base_name)}\((\d+)\){re.escape(extension)}$")
-    numbered_matches: List[tuple[int, str]] = []
+    numbered_matches: list[tuple[int, str]] = []
 
     for entry in os.listdir("."):
         match = pattern.match(entry)
@@ -827,7 +827,7 @@ def find_and_extract_model_zip_file_if_exists() -> None:
         return
 
     if zip_file_would_overwrite(zip_file):
-        console.print(f"[bold red]Extraction skipped. One or more files already exist.[/bold red]")
+        console.print("[bold red]Extraction skipped. One or more files already exist.[/bold red]")
         return
 
     extract_zip_file(zip_file)
