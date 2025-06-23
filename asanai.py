@@ -532,8 +532,12 @@ def try_install_docker_mac() -> None:
                 with tempfile.TemporaryDirectory() as tmpdirname:
                     script_path = os.path.join(tmpdirname, 'install_homebrew.sh')
 
+                    script_https_url = 'https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh'
+
+                    console.print(f"[yellow]Download script from {script_https_url}[/yellow]")
+
                     curl_result = subprocess.run(
-                        ['curl', '-fsSL', 'https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh', '-o', script_path],
+                        ['curl', '-fsSL', script_https_url, '-o', script_path],
                         check=False, capture_output=True, text=True)
 
                     if curl_result.returncode != 0:
