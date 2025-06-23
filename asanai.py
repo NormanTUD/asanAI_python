@@ -776,7 +776,6 @@ def find_model_zip(base_name: str = "model", extension: str = ".zip") -> Optiona
     numbered_matches.sort(key=lambda x: x[0])
     return numbered_matches[0][1]
 
-
 @beartype
 def zip_file_would_overwrite(zip_path: str) -> bool:
     """
@@ -792,12 +791,20 @@ def zip_file_would_overwrite(zip_path: str) -> bool:
     except zipfile.BadZipFile:
         console.print(f"[bold red]Invalid ZIP file:[/bold red] {zip_path}")
         return True
-    except Exception as e:
-        console.print(f"[bold red]Unexpected error reading ZIP file:[/bold red] {zip_path} - {e}")
+    except FileNotFoundError:
+        console.print(f"[bold red]ZIP file not found:[/bold red] {zip_path}")
+        return True
+    except PermissionError:
+        console.print(f"[bold red]Permission denied when accessing ZIP file:[/bold red] {zip_path}")
+        return True
+    except OSError as e:
+        console.print(f"[bold red]OS error while accessing ZIP file:[/bold red] {zip_path} - {e}")
+        return True
+    except zipfile.LargeZipFile:
+        console.print(f"[bold red]ZIP file requires ZIP64 support:[/bold red] {zip_path}")
         return True
 
     return False
-
 
 @beartype
 def extract_zip_file(zip_path: str) -> None:
@@ -810,9 +817,18 @@ def extract_zip_file(zip_path: str) -> None:
         console.print(f"[green]Successfully extracted:[/green] {zip_path}")
     except zipfile.BadZipFile:
         console.print(f"[bold red]Invalid ZIP file:[/bold red] {zip_path}")
-    except Exception as e:
-        console.print(f"[bold red]Extraction failed for:[/bold red] {zip_path} - {e}")
-
+    except zipfile.BadZipFile:
+        console.print(f"[bold red]Invalid ZIP file:[/bold red] {zip_path}")
+    except zipfile.LargeZipFile:
+        console.print(f"[bold red]ZIP file requires ZIP64 support:[/bold red] {zip_path}")
+    except FileNotFoundError:
+        console.print(f"[bold red]ZIP file not found:[/bold red] {zip_path}")
+    except PermissionError:
+        console.print(f"[bold red]Permission denied when accessing ZIP file:[/bold red] {zip_path}")
+    except IsADirectoryError:
+        console.print(f"[bold red]Expected ZIP file but got a directory:[/bold red] {zip_path}")
+    except OSError as e:
+        console.print(f"[bold red]OS error during extraction:[/bold red] {zip_path} - {e}")
 
 @beartype
 def find_and_extract_model_zip_file_if_exists() -> None:
@@ -1161,7 +1177,6 @@ def get_shape(filename: Union[str, Path]) -> Optional[list[int]]:
     except IOError as e:
         console.print(f"[red]I/O error reading file {path}:[/] {e}")
         return None
-
 
 @beartype
 def _exit_with_error(msg: str) -> None:
