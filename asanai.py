@@ -536,11 +536,27 @@ def update_wsl_if_windows() -> None:
             subprocess.run(["wsl", "--install"], capture_output=True, text=True, check=True)
             console.print("[bold green]✅ WSL installation initiated successfully.[/bold green]")
             console.print("[cyan]You may need to reboot your system to complete the installation.[/cyan]")
+        except FileNotFoundError as e:
+            console.print("[red]❌ 'wsl' command not found. Is WSL supported on your system?[/red]")
+            console.print(f"[red]{str(e)}[/red]")
+
+        except PermissionError as e:
+            console.print("[red]❌ Permission denied. Try running this script with administrative privileges.[/red]")
+            console.print(f"[red]{str(e)}[/red]")
+
         except subprocess.CalledProcessError as e:
-            console.print("[red]❌ Failed to install WSL:[/red]")
-            console.print(f"[red]{e.stderr.strip()}[/red]")
-        except Exception as e:
-            console.print(f"[red]❌ Unexpected error during WSL install: {str(e)}[/red]")
+            console.print("[red]❌ WSL installation failed with a subprocess error:[/red]")
+            console.print(f"[red]Exit code: {e.returncode}[/red]")
+            console.print(f"[red]Command: {' '.join(e.cmd)}[/red]")
+            if e.stderr:
+                console.print(f"[red]Error Output: {e.stderr.strip()}[/red]")
+            else:
+                console.print("[red]No error output available.[/red]")
+
+        except OSError as e:
+            console.print("[red]❌ Operating system error during WSL installation.[/red]")
+            console.print(f"[red]{str(e)}[/red]")
+
         return
     except subprocess.CalledProcessError as e:
         console.print("[red]❌ Error while checking WSL status:[/red]")
