@@ -597,7 +597,7 @@ def check_docker_and_try_to_install(tfjs_model_json: str, weights_bin: str) -> b
     return True
 
 @beartype
-def is_windows() -> None:
+def is_windows() -> bool:
     return platform.system().lower() == "windows"
 
 @beartype
