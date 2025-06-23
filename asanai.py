@@ -549,6 +549,9 @@ def try_install_docker_mac() -> None:
                     os.chmod(script_path, 0o755)
 
                     console.print("[yellow]🛠 Running Homebrew install script...[/yellow]")
+
+                    env["NONINTERACTIVE"] = "1"
+
                     install_result = subprocess.run(
                         [script_path],
                         shell=False,
