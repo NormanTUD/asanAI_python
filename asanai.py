@@ -203,14 +203,25 @@ def run_installer(installer_path: str) -> bool:
         return False
 
 @beartype
+def ask_yes_no(prompt) -> bool:
+    while True:
+        answer = Prompt.ask(prompt, default="no").strip().lower()
+        if answer in ['yes', 'y', 'j']:  # include 'j' if you want (for German 'ja')
+            return True
+        elif answer in ['no', 'n']:
+            return False
+        else:
+            console.print("[red]Please answer with 'yes', 'y' or 'no', 'n'.[/red]")
+
+@beartype
 def download_and_install_ms_visual_cpp() -> None:
     url = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
     filename = "vc_redist.x64.exe"
     filepath = os.path.join(os.getcwd(), filename)
 
     print("This Visual C++ Redistributable package is required for TensorFlow to work properly.")
-    user_input = input("Do you want to download and install it now? (yes/no): ").strip().lower()
-    if user_input not in ("yes", "y", "j"):
+    continue_install = ask_yes_no("Do you want to download and install it now? (yes/j/y/no): ")
+    if continue_install:
         print("Operation cancelled by user.")
         sys.exit(0)
 
@@ -492,9 +503,9 @@ def try_install_docker():
         print("✅ Docker is already installed.")
         return True
 
-    answer = input("Do you want to try installing Docker? [y/j/yes]: ").strip().lower()
+    answer = ask_yes_no("Do you want to try installing Docker? [y/j/yes]: ")
 
-    if not answer in {'y', 'j', 'yes'}:
+    if not answer:
         console.print("[red]Docker is required. The script cannot continue without Docker.[/red]")
 
         return False
