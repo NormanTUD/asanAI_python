@@ -1033,7 +1033,7 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
     return frame
 
 @beartype
-def get_shape(filename: str | Path) -> Optional[list[int]]:
+def get_shape(filename: Union[str, Path]) -> Optional[list[int]]:
     path = Path(filename)
     if not path.exists():
         console.print(f"[red]Error:[/] File does not exist: {path}")
