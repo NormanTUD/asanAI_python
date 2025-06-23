@@ -783,7 +783,7 @@ CMD ["/bin/bash"]
 
         image_name = 'tfjs_converter_py310_dynamic'
 
-        console.print("[cyan]Building Docker image for fallback conversion...[/]")
+        console.print("[cyan]Building Docker image for fallback conversion. This may take some time...[/]")
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
