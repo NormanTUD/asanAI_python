@@ -210,7 +210,8 @@ def ask_yes_no(prompt) -> bool:
 
         if answer in ['yes', 'y', 'j']:
             return True
-        elif answer in ['no', 'n', 'nein']:
+
+        if answer in ['no', 'n', 'nein']:
             return False
 
         console.print("[red]Please answer with 'yes', 'y' or 'no', 'n'.[/red]")
