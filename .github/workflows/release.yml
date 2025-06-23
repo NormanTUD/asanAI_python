@@ -26,6 +26,10 @@ jobs:
 
   endtoendtest:
     needs: [linter]
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     permissions:
       contents: read
     environment: Production
