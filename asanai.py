@@ -20,6 +20,7 @@ try:
     import urllib.error
     import psutil
     import unicodedata
+    import zipfile
 
     from colorama import Style, Fore, Back, init
     import numpy as np
