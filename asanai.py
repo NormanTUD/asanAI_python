@@ -502,6 +502,7 @@ def try_install_docker_windows():
         ], check=True)
         print("✅ Docker installation started. Please complete setup manually if needed.")
         print("✅ Please restart the cmd on Windows and restart script manually.")
+        start_docker_if_not_running()
         sys.exit(0)
 
     except subprocess.CalledProcessError as e:
