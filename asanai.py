@@ -602,10 +602,15 @@ def is_windows() -> bool:
 
 @beartype
 def get_program_files() -> str:
-    if os.environ.get("ProgramW6432"):
-        return os.environ.get("ProgramW6432")
+    program_w6432 = os.environ.get("ProgramW6432")
+    if program_w6432 is not None:
+        return program_w6432
 
-    return os.environ.get("ProgramFiles")
+    program_files = os.environ.get("ProgramFiles")
+    if program_files is not None:
+        return program_files
+
+    raise EnvironmentError("Neither 'ProgramW6432' nor 'ProgramFiles' environment variables are set.")
 
 @beartype
 def is_docker_running() -> bool:
@@ -636,7 +641,7 @@ def start_docker_if_not_running() -> bool:
         return True
     if is_docker_running():
         return False
-    return start_docker()
+    return start_docker() == 0
 
 @beartype
 def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> bool:
