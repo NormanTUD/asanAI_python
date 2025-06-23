@@ -154,7 +154,6 @@ def _platform_wheel_warning() -> None:
             "not supported by official TensorFlow wheels.[/red]"
         )
 
-
 @beartype
 def download_file(url: str, dest_path: str) -> bool:
     try:
@@ -167,8 +166,16 @@ def download_file(url: str, dest_path: str) -> bool:
                 file.write(data)
         print(f"File successfully downloaded: {dest_path}")
         return True
-    except Exception as e:
-        print(f"Error while downloading: {e}")
+    except urllib.error.HTTPError as e:
+        print(f"HTTP error while downloading: {e.code} - {e.reason}")
+        return False
+
+    except urllib.error.URLError as e:
+        print(f"URL error while downloading: {e.reason}")
+        return False
+
+    except ValueError as e:
+        print(f"Invalid URL: {e}")
         return False
 
 @beartype
