@@ -220,8 +220,6 @@ def ask_yes_no(prompt) -> bool:
     while True:
         answer = normalize_input(Prompt.ask(prompt, default="no")).strip().lower()
 
-        console.print(f"Answer: {answer}")
-
         if answer in ['yes', 'y', 'j']:
             return True
 
