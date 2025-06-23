@@ -539,8 +539,29 @@ def update_wsl_if_windows() -> None:
             else:
                 console.print("[bold red]❌ Error during 'wsl --update':[/bold red]")
                 console.print(f"[red]{update.stderr.strip()}[/red]")
+        except subprocess.CalledProcessError as cpe:
+            # CalledProcessError: Command returned non-zero exit code
+            console.print("[bold red]❌ Error during 'wsl --update' command execution:[/bold red]")
+            console.print(f"[red]{cpe.stderr.strip() if cpe.stderr else str(cpe)}[/red]")
+
+        except FileNotFoundError as fnf_error:
+            # Executable 'wsl' not found
+            console.print("[bold red]❌ 'wsl' executable not found. Is WSL installed?[/bold red]")
+            console.print(f"[red]{str(fnf_error)}[/red]")
+
+        except subprocess.TimeoutExpired as timeout_error:
+            # If you decide to add a timeout in future
+            console.print("[bold red]❌ 'wsl --update' command timed out.[/bold red]")
+            console.print(f"[red]{str(timeout_error)}[/red]")
+
+        except OSError as os_error:
+            # Other OS errors (permissions, resource limits)
+            console.print("[bold red]❌ OS error occurred while running 'wsl --update':[/bold red]")
+            console.print(f"[red]{str(os_error)}[/red]")
+
         except Exception as ex:
-            console.print("[bold red]Unexpected error while executing 'wsl --update':[/bold red]")
+            # Catch-all for unexpected exceptions - this should rarely happen
+            console.print("[bold red]❌ Unexpected error while executing 'wsl --update':[/bold red]")
             console.print(f"[red]{str(ex)}[/red]")
     else:
         console.print("[yellow]Update cancelled. WSL remains unchanged.[/yellow]")
