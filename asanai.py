@@ -748,6 +748,91 @@ def start_docker_if_not_running() -> bool:
     return start_docker() == 0
 
 @beartype
+def find_model_zip(base_name: str = "model", extension: str = ".zip") -> Optional[str]:
+    """
+    Search for a ZIP file named model.zip or model(n).zip in the current directory.
+    Returns the first match found, preferring model.zip over numbered versions.
+    """
+    direct = f"{base_name}{extension}"
+    if os.path.isfile(direct):
+        return direct
+
+    pattern = re.compile(rf"^{re.escape(base_name)}\((\d+)\){re.escape(extension)}$")
+    numbered_matches: List[tuple[int, str]] = []
+
+    for entry in os.listdir("."):
+        match = pattern.match(entry)
+        if match and os.path.isfile(entry):
+            try:
+                number = int(match.group(1))
+                numbered_matches.append((number, entry))
+            except ValueError:
+                console.print(f"[red]Failed to parse number from file: {entry}[/red]")
+
+    if not numbered_matches:
+        return None
+
+    # Return the file with the smallest number (model(1).zip, model(2).zip, ...)
+    numbered_matches.sort(key=lambda x: x[0])
+    return numbered_matches[0][1]
+
+
+@beartype
+def zip_file_would_overwrite(zip_path: str) -> bool:
+    """
+    Checks whether extracting the given zip file would overwrite any existing files.
+    Returns True if at least one file already exists.
+    """
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            for name in zip_ref.namelist():
+                if os.path.exists(name):
+                    console.print(f"[bold yellow]File already exists and would be overwritten: {name}[/bold yellow]")
+                    return True
+    except zipfile.BadZipFile:
+        console.print(f"[bold red]Invalid ZIP file:[/bold red] {zip_path}")
+        return True
+    except Exception as e:
+        console.print(f"[bold red]Unexpected error reading ZIP file:[/bold red] {zip_path} - {e}")
+        return True
+
+    return False
+
+
+@beartype
+def extract_zip_file(zip_path: str) -> None:
+    """
+    Extracts the given zip file to the current directory.
+    """
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(".")
+        console.print(f"[green]Successfully extracted:[/green] {zip_path}")
+    except zipfile.BadZipFile:
+        console.print(f"[bold red]Invalid ZIP file:[/bold red] {zip_path}")
+    except Exception as e:
+        console.print(f"[bold red]Extraction failed for:[/bold red] {zip_path} - {e}")
+
+
+@beartype
+def find_and_extract_model_zip_file_if_exists() -> None:
+    """
+    Finds and conditionally extracts the first valid model.zip or model(n).zip file.
+    Does nothing if the archive would overwrite existing files.
+    """
+    zip_file = find_model_zip()
+
+    if zip_file is None:
+        console.print("[bold yellow]No model.zip or model(n).zip file found.[/bold yellow]")
+        return
+
+    if zip_file_would_overwrite(zip_file):
+        console.print(f"[bold red]Extraction skipped. One or more files already exist.[/bold red]")
+        return
+
+    extract_zip_file(zip_file)
+
+@beartype
 def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> bool:
     keras_h5_file = 'model.h5'
 
@@ -761,6 +846,9 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
 
     original_tfjs_model_json = str(files.get("model.json"))
     original_weights_bin = str(files.get("model.weights.bin"))
+
+    if not os.path.exists(original_tfjs_model_json) or not os.path.exists(original_weights_bin):
+        find_and_extract_model_zip_file_if_exists()
 
     if not os.path.exists(original_tfjs_model_json) or not os.path.exists(original_weights_bin):
         console.print("[red]No model.json and/or model.weights.bin found. Cannot continue. Have you downloaded the models from asanAI? If not, do so and put them in the same folder as your script.[/red]")
