@@ -512,14 +512,59 @@ def try_install_docker_windows():
         print(f"Details: {e}")
 
 @beartype
-def try_install_docker_mac():
-    if shutil.which("brew"):
-        print("🛠 Installing Docker via Homebrew...")
-        subprocess.run(['brew', 'install', '--cask', 'docker'], check=True)
-        print("✅ Docker installed. Please start Docker Desktop manually.")
-    else:
-        print("❌ Homebrew not found.")
-        print("👉 Install manually: https://docs.docker.com/docker-for-mac/install/")
+def try_install_docker_mac() -> None:
+    """
+    Versucht Docker auf macOS über Homebrew zu installieren.
+    Falls Homebrew nicht gefunden wird, wird gefragt, ob Homebrew installiert werden soll.
+    """
+    try:
+        if shutil.which("brew"):
+            print("🛠️ Installing Docker via Homebrew...")
+            result = subprocess.run(['brew', 'install', '--cask', 'docker'], check=False, capture_output=True, text=True)
+            if result.returncode == 0:
+                print("✅ Docker installed. Please start Docker Desktop manually.")
+            else:
+                print("❌ Failed to install Docker via Homebrew.")
+                print(f"Output: {result.stdout}")
+                print(f"Error: {result.stderr}")
+        else:
+            print("❌ Homebrew not found.")
+            should_install_brew = ask_yes_no("Do you want to install Homebrew now? (yes/no)")
+            if should_install_brew:
+                print("🛠️ Installing Homebrew...")
+                try:
+                    # Homebrew Install-Script ausführen
+                    # Offizielle Anleitung: https://brew.sh
+                    install_cmd = (
+                        '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+                    )
+                    # subprocess.run in Shell, da komplexer Befehl
+                    install_result = subprocess.run(install_cmd, shell=True, check=False, capture_output=True, text=True)
+                    if install_result.returncode == 0:
+                        print("✅ Homebrew installed successfully.")
+                        # Homebrew in PATH laden für diese Session (muss je nach Shell angepasst werden)
+                        brew_path = "/opt/homebrew/bin/brew"  # Für Apple Silicon Mac
+                        if os.path.exists(brew_path):
+                            os.environ["PATH"] = brew_path + os.pathsep + os.environ.get("PATH", "")
+                        else:
+                            # Fallback Pfad für Intel Macs
+                            brew_path = "/usr/local/bin/brew"
+                            if os.path.exists(brew_path):
+                                os.environ["PATH"] = brew_path + os.pathsep + os.environ.get("PATH", "")
+                        # Nochmal versuchen Docker zu installieren
+                        try_install_docker_mac()
+                    else:
+                        print("❌ Homebrew installation failed.")
+                        print(f"Output: {install_result.stdout}")
+                        print(f"Error: {install_result.stderr}")
+                except Exception as ex:
+                    print(f"❌ Exception while installing Homebrew: {ex}")
+            else:
+                print("👉 Please install Homebrew manually: https://brew.sh")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ CalledProcessError: {e}")
+    except Exception as e:
+        print(f"❌ Unexpected error: {e}")
 
 @beartype
 def update_wsl_if_windows() -> None: # pylint: disable=too-many-branches
