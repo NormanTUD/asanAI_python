@@ -1678,7 +1678,7 @@ def visualize_webcam(
         cv2.destroyAllWindows()  # pylint: disable=no-member
         sys.exit(1)
 
-class GradCAMWrapper:
+class GradCAMWrapper: # pylint: disable=missing-class-docstring
     def __init__(self, model) -> None:
         self.model = model
         self.gradcam = Gradcam(model, model_modifier=None)
