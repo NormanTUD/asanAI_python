@@ -1726,7 +1726,7 @@ class GradCAMWrapper: # pylint: disable=missing-class-docstring
             traceback.print_exc()
 
         except IndexError as e:
-            print("Could not determine class indices: likely malformed prediction output.")
+            print(f"Could not determine class indices: likely malformed prediction output. Error: {e}")
             traceback.print_exc()
 
         return preds
