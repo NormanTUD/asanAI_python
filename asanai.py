@@ -3,7 +3,7 @@
 import sys
 
 try:
-    import pprint
+    from pprint import pprint
     import re
     import os
     from pathlib import Path
@@ -51,7 +51,7 @@ signal.signal(signal.SIGINT, signal_handler)
 
 @beartype
 def dier (msg: Any) -> None:
-    pprint.pprint(msg)
+    pprint(msg)
     sys.exit(1)
 
 console = Console()
@@ -1391,7 +1391,7 @@ def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
 
 @beartype
 def show_result(msg) -> None:
-    pprint.pprint(msg)
+    pprint(msg)
 
 @beartype
 def model_is_simple_classification(model: Sequential) -> bool:
