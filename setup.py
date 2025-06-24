@@ -73,7 +73,7 @@ setup(
     long_description=open('README.md', encoding="utf-8").read(),
     long_description_content_type='text/markdown',
     name='asanAI',
-    version='0.95',
+    version='0.96',
     description='This allows less code in the examples of asanAI',
     author='Norman Koch',
     author_email='norman.koch@tu-dresden.de',
