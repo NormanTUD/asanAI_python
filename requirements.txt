@@ -6,3 +6,5 @@ opencv-python
 rich
 psutil
 keras
+tf-keras-vis
+matplotlib

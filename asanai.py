@@ -34,6 +34,11 @@ try:
     from rich.text import Text
     from rich.markup import escape
     from beartype import beartype
+
+    from tf_keras_vis.gradcam import Gradcam
+    from tf_keras_vis.utils.model_modifiers import ReplaceToLinear
+    from tf_keras_vis.utils.scores import CategoricalScore
+    import matplotlib.pyplot as plt
 except ModuleNotFoundError as e:
     print(f"Failed to load module: {e}")
     sys.exit(1)
