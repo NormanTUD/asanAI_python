@@ -1670,9 +1670,6 @@ def visualize_webcam(
 
     except (cv2.error, AttributeError, ValueError, TypeError, RuntimeError) as e:
         console.print(f"[red]Error in visualize_webcam: {e}[/red]")
-        try:
-            cap.release()
-            cv2.destroyAllWindows()  # pylint: disable=no-member
-        except Exception:
-            pass
+        cap.release()
+        cv2.destroyAllWindows()  # pylint: disable=no-member
         sys.exit(1)
