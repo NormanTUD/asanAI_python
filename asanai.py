@@ -1473,9 +1473,6 @@ def output_is_simple_image(model: Sequential) -> bool:
     except ValueError as error:
         print(f"ValueError unpacking output_shape in output_is_simple_image: {error}")
         return False
-    except Exception as error:
-        print(f"Unexpected error unpacking output_shape in output_is_simple_image: {error}")
-        return False
 
     if batch is not None and batch != -1:
         return False
@@ -1589,8 +1586,8 @@ def visualize(model: Sequential, img_filepath: Union[Path, str]) -> None:
         else:
             print(f"Unknown output shape {output_shape}, cannot display as image.")
 
-    except Exception as error:
-        print(f"Error in visualize: {error}")
+    except cv2.error as error:
+        print(f"OpenCV error displaying image in visualize: {error}")
 
 @beartype
 def visualize_webcam(
@@ -1671,8 +1668,11 @@ def visualize_webcam(
         cv2.destroyAllWindows() # pylint: disable=no-member
         sys.exit(0)
 
-    except Exception as e:
+    except (cv2.error, AttributeError, ValueError, TypeError, RuntimeError) as e:
         console.print(f"[red]Error in visualize_webcam: {e}[/red]")
-        cap.release()
-        cv2.destroyAllWindows() # pylint: disable=no-member
+        try:
+            cap.release()
+            cv2.destroyAllWindows()  # pylint: disable=no-member
+        except Exception:
+            pass
         sys.exit(1)
