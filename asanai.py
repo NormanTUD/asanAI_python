@@ -1678,3 +1678,56 @@ def visualize_webcam(
         cap.release()
         cv2.destroyAllWindows()  # pylint: disable=no-member
         sys.exit(1)
+
+class GradCAMWrapper:
+    def __init__(self, model) -> None:
+        self.model = model
+        self.gradcam = Gradcam(model, model_modifier=None)
+        self.fig = None
+        self.ax = None
+        plt.ion()  # Interaktiver Modus an
+
+    def predict(self, x, *args, **kwargs):
+        preds = self.model.predict(x, *args, **kwargs)
+
+        try:
+            if preds.ndim == 2:
+                class_indices = np.argmax(preds, axis=1)
+            else:
+                class_indices = np.zeros((preds.shape[0],), dtype=int)
+
+            for i in range(len(x)):
+                img = x[i]
+                if img.ndim == 3:
+                    input_img = np.expand_dims(img, axis=0)
+                else:
+                    input_img = img
+
+                score = CategoricalScore([int(class_indices[i])])
+                cam = self.gradcam(score, input_img, penultimate_layer=-1)
+                heatmap = np.uint8(255 * cam[0])
+
+                if img.max() > 1.0:
+                    disp_img = img.astype(np.uint8)
+                else:
+                    disp_img = (img * 255).astype(np.uint8)
+
+                if self.fig is None or not plt.fignum_exists(self.fig.number):
+                    self.fig, self.ax = plt.subplots(figsize=(6,6))
+                self.ax.clear()
+                self.ax.imshow(disp_img)
+                self.ax.imshow(heatmap, cmap='jet', alpha=0.5)
+                self.ax.set_title(f"Grad-CAM Klasse {class_indices[i]}")
+                self.ax.axis('off')
+                self.fig.canvas.draw()
+                self.fig.canvas.flush_events()
+
+        except Exception as e:
+            print("Fehler bei automatischer Grad-CAM Visualisierung:")
+            import traceback
+            traceback.print_exc()
+
+        return preds
+
+    def __getattr__(self, attr):
+        return getattr(self.model, attr)
