@@ -34,10 +34,6 @@ try:
     from rich.text import Text
     from rich.markup import escape
     from beartype import beartype
-    from tensorflow.keras.models import Sequential
-    from tensorflow.keras.layers import Activation
-    from tensorflow.keras.layers import Softmax
-    from tensorflow.keras.layers import Dense
 except ModuleNotFoundError as e:
     print(f"Failed to load module: {e}")
     sys.exit(1)
@@ -1394,7 +1390,11 @@ def show_result(msg) -> None:
     pprint(msg)
 
 @beartype
-def model_is_simple_classification(model: Sequential) -> bool:
+def model_is_simple_classification(model: Any) -> bool:
+    from tensorflow.keras.layers import Activation
+    from tensorflow.keras.layers import Softmax
+    from tensorflow.keras.layers import Dense
+
     try:
         if not model.layers:
             return False
@@ -1451,7 +1451,7 @@ def model_is_simple_classification(model: Sequential) -> bool:
         return False
 
 @beartype
-def output_is_simple_image(model: Sequential) -> bool:
+def output_is_simple_image(model: Any) -> bool:
     try:
         output_shape = model.output_shape
     except AttributeError as error:
@@ -1487,7 +1487,7 @@ def output_is_simple_image(model: Sequential) -> bool:
 
 
 @beartype
-def output_is_complex_image(model: Sequential) -> bool:
+def output_is_complex_image(model: Any) -> bool:
     try:
         output_shape = model.output_shape
         # Expect shape (?, n, m, a) with a ∈ N (a > 0)
@@ -1511,7 +1511,7 @@ def output_is_complex_image(model: Sequential) -> bool:
         return False
 
 @beartype
-def visualize(model: Sequential, img_filepath: Union[Path, str]) -> None:
+def visualize(model: Any, img_filepath: Union[Path, str]) -> None:
     try:
         img = load(img_filepath)
         if img is None:
@@ -1591,7 +1591,7 @@ def visualize(model: Sequential, img_filepath: Union[Path, str]) -> None:
 
 @beartype
 def visualize_webcam(
-    model: Sequential,
+    model: Any,
     height: int = 224,
     width: int = 224,
     divide_by: Union[int, float] = 255.0,
