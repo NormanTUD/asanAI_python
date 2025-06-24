@@ -1717,7 +1717,7 @@ class GradCAMWrapper:
                 self.ax.clear()
                 self.ax.imshow(disp_img)
                 self.ax.imshow(heatmap, cmap='jet', alpha=0.5)
-                self.ax.set_title(f"Grad-CAM Klasse {class_indices[i]}")
+                self.ax.set_title(f"Grad-CAM Class {class_indices[i]}")
                 self.ax.axis('off')
                 self.fig.canvas.draw()
                 self.fig.canvas.flush_events()
