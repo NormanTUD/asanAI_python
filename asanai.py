@@ -34,10 +34,6 @@ try:
     from rich.text import Text
     from rich.markup import escape
     from beartype import beartype
-
-    from tf_keras_vis.gradcam import Gradcam
-    from tf_keras_vis.utils.scores import CategoricalScore
-    import matplotlib.pyplot as plt
 except ModuleNotFoundError as e:
     print(f"Failed to load module: {e}")
     sys.exit(1)
@@ -1677,59 +1673,3 @@ def visualize_webcam(
         cap.release()
         cv2.destroyAllWindows()  # pylint: disable=no-member
         sys.exit(1)
-
-class GradCAMWrapper: # pylint: disable=missing-class-docstring
-    def __init__(self, model) -> None:
-        self.model = model
-        self.gradcam = Gradcam(model, model_modifier=None)
-        self.fig = None
-        self.ax = None
-        plt.ion()  # Interaktiver Modus an
-
-    def predict(self, x, *args, **kwargs):
-        preds = self.model.predict(x, *args, **kwargs)
-
-        try:
-            if preds.ndim == 2:
-                class_indices = np.argmax(preds, axis=1)
-            else:
-                class_indices = np.zeros((preds.shape[0],), dtype=int)
-
-            for i, img in enumerate(x):
-                img = x[i]
-                if img.ndim == 3:
-                    input_img = np.expand_dims(img, axis=0)
-                else:
-                    input_img = img
-
-                score = CategoricalScore([int(class_indices[i])])
-                cam = self.gradcam(score, input_img, penultimate_layer=-1)
-                heatmap = np.uint8(255 * cam[0])
-
-                if img.max() > 1.0:
-                    disp_img = img.astype(np.uint8)
-                else:
-                    disp_img = (img * 255).astype(np.uint8)
-
-                if self.fig is None or not plt.fignum_exists(self.fig.number):
-                    self.fig, self.ax = plt.subplots(figsize=(6,6))
-                self.ax.clear()
-                self.ax.imshow(disp_img)
-                self.ax.imshow(heatmap, cmap='jet', alpha=0.5)
-                self.ax.set_title(f"Grad-CAM Class {class_indices[i]}")
-                self.ax.axis('off')
-                self.fig.canvas.draw()
-                self.fig.canvas.flush_events()
-
-        except AttributeError as e:
-            print(f"Prediction output does not have 'ndim' or is not a valid array-like object. Error: {e}")
-            traceback.print_exc()
-
-        except IndexError as e:
-            print(f"Could not determine class indices: likely malformed prediction output. Error: {e}")
-            traceback.print_exc()
-
-        return preds
-
-    def __getattr__(self, attr):
-        return getattr(self.model, attr)
