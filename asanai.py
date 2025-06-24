@@ -31,6 +31,8 @@ try:
     from rich.prompt import Prompt
     from rich.progress import SpinnerColumn, Progress, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn
     from rich.text import Text
+    from rich.table import Table
+    from rich.panel import Panel
     from rich.markup import escape
     from beartype import beartype
 except ModuleNotFoundError as e:
@@ -1081,7 +1083,7 @@ CMD ["/bin/bash"]
 
 @beartype
 def load(filename: Union[Path, str], height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> Optional[np.ndarray]:
-    rule(f"[bold cyan]Loading image {filename}[/]")
+    rule(f"[bold cyan]Loading and predicting image {filename}[/]")
     try:
         if not os.path.exists(filename):
             console.print(f"[red]Error: The path '{filename}' could not be found![/red]")
