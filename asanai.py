@@ -1722,7 +1722,7 @@ class GradCAMWrapper: # pylint: disable=missing-class-docstring
                 self.fig.canvas.flush_events()
 
         except AttributeError as e:
-            print("Prediction output does not have 'ndim' or is not a valid array-like object.")
+            print(f"Prediction output does not have 'ndim' or is not a valid array-like object. Error: {e}")
             traceback.print_exc()
 
         except IndexError as e:
