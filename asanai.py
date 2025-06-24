@@ -27,6 +27,7 @@ try:
     from skimage import transform
     from PIL import Image, UnidentifiedImageError, ImageDraw, ImageFont
     from rich.console import Console
+    from rich import print as rprint
     from rich.prompt import Prompt
     from rich.progress import SpinnerColumn, Progress, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn
     from rich.text import Text
@@ -1162,7 +1163,6 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
     best_idx = int(np.argmax(probs))
 
     if len(labels) != len(probs):
-        from rich import print as rprint
         rprint(f"[bold red]❌ Label count ({len(labels)}) does not match number of prediction probabilities ({len(probs)}).[/bold red]")
         rprint("[yellow]Make sure the number of labels in your script is correct.[/yellow]")
         sys.exit(0)
@@ -1231,11 +1231,12 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
         for i, label in enumerate(labels):
             text = f"{label}: {formatted_probs[i]}"
             colour = (0, 255, 0) if i == best_idx else (255, 0, 0)
-            cv2.putText(
+            cv2.putText( # pylint: disable=no-member
+
                 frame,
                 text,
                 (10, 30 * (i + 1)),
-                cv2.FONT_HERSHEY_SIMPLEX,
+                cv2.FONT_HERSHEY_SIMPLEX, # pylint: disable=no-member
                 0.8,
                 colour,
                 2,
