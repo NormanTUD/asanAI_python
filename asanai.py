@@ -32,10 +32,7 @@ try:
     from rich.prompt import Prompt
     from rich.progress import SpinnerColumn, Progress, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn
     from rich.text import Text
-    from rich.table import Table
-    from rich.panel import Panel
     from rich.markup import escape
-    import keras
     from beartype import beartype
     from tensorflow.keras.models import Sequential
     from tensorflow.keras.layers import Activation
@@ -46,8 +43,8 @@ except ModuleNotFoundError as e:
     sys.exit(1)
 
 def signal_handler(sig, frame):
-    print("\nKeyboard interrupt received. Exiting program.")
-    cv2.destroyAllWindows()
+    print(f"\nKeyboard interrupt received. Exiting program. Got signal {sig}, frame {frame}")
+    cv2.destroyAllWindows() # pylint: disable=no-member
     sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
@@ -1237,7 +1234,7 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
         overlay_text = f"Top-1: {labels[best_idx]} ({formatted_probs[best_idx]})"
         draw.text((10, 10 + line_height * len(labels) + 10), overlay_text, font=font, fill=(255, 255, 255))
 
-        frame = cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR)
+        frame = cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR) # pylint: disable=no-member
 
     except (OSError, FileNotFoundError, ValueError, AttributeError, TypeError) as specific_err:
         print("Error while drawing with Truetype-Font:", specific_err)
@@ -1508,7 +1505,7 @@ def visualize(model: Sequential, img_filepath: Union[Path, str]) -> None:
         _, expected_height, expected_width, expected_channels = expected_shape
 
         if img.shape[0] != expected_height or img.shape[1] != expected_width:
-            img = cv2.resize(img, (expected_width, expected_height))
+            img = cv2.resize(img, (expected_width, expected_height)) # pylint: disable=no-member
 
         if img.shape[2] != expected_channels:
             print(f"Channel mismatch: image has {img.shape[2]}, model expects {expected_channels}")
@@ -1525,9 +1522,9 @@ def visualize(model: Sequential, img_filepath: Union[Path, str]) -> None:
 
             if num_channels == 3:
                 display_img = (output_img * 255).astype(np.uint8)
-                display_img = cv2.cvtColor(display_img, cv2.COLOR_RGB2BGR)
+                display_img = cv2.cvtColor(display_img, cv2.COLOR_RGB2BGR) # pylint: disable=no-member
                 window_name = "Model Output - Color"
-                cv2.imshow(window_name, display_img)
+                cv2.imshow(window_name, display_img) # pylint: disable=no-member
 
             else:
                 gray_imgs = []
@@ -1544,19 +1541,19 @@ def visualize(model: Sequential, img_filepath: Union[Path, str]) -> None:
 
                 combined_img = np.hstack(gray_imgs)
                 window_name = f"Model Output - {num_channels} grayscale channels"
-                cv2.imshow(window_name, combined_img)
+                cv2.imshow(window_name, combined_img) # pylint: disable=no-member
 
             # Wait until window is closed or a key is pressed, or Ctrl+C is triggered
             while True:
-                key = cv2.waitKey(100)  # Wait 100ms
+                key = cv2.waitKey(100)  # pylint: disable=no-member
                 # If window closed, getWindowProperty returns <0
-                if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1:
+                if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1: # pylint: disable=no-member
                     break
                 # If key pressed (any key), also break
                 if key != -1:
                     break
 
-            cv2.destroyAllWindows()
+            cv2.destroyAllWindows() # pylint: disable=no-member
 
         elif len(output_shape) == 2:
             print("Model output is 2D - cannot display as image.")
@@ -1573,10 +1570,8 @@ def visualize_webcam(
     width: int = 224,
     divide_by: Union[int, float] = 255.0,
 ) -> None:
-    import asanai
-
     try:
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(0) # pylint: disable=no-member
         if not cap.isOpened():
             console.print("[red]Could not open webcam.[/red]")
             return
@@ -1590,7 +1585,7 @@ def visualize_webcam(
                 sys.exit(1)
 
             # Preprocess frame for model input
-            image = asanai.load_frame(frame, height, width, divide_by)
+            image = load_frame(frame, height, width, divide_by)
 
             if image is not None:
                 predictions = model.predict(image, verbose=0)
@@ -1602,8 +1597,8 @@ def visualize_webcam(
 
                     if num_channels == 3:
                         disp_img = (output * 255).astype(np.uint8)
-                        disp_img = cv2.cvtColor(disp_img, cv2.COLOR_RGB2BGR)
-                        cv2.imshow(window_name, disp_img)
+                        disp_img = cv2.cvtColor(disp_img, cv2.COLOR_RGB2BGR) # pylint: disable=no-member
+                        cv2.imshow(window_name, disp_img) # pylint: disable=no-member
 
                     elif num_channels != 3:
                         gray_imgs = []
@@ -1619,7 +1614,7 @@ def visualize_webcam(
                             gray_imgs.append(gray_img)
 
                         combined_img = np.hstack(gray_imgs)
-                        cv2.imshow(window_name, combined_img)
+                        cv2.imshow(window_name, combined_img) # pylint: disable=no-member
 
                     else:
                         console.print(f"[yellow]Unsupported model output shape for display: {output.shape}[/yellow]")
@@ -1629,26 +1624,26 @@ def visualize_webcam(
             else:
                 console.print("[red]Failed to preprocess webcam frame for model.[/red]")
 
-            key = cv2.waitKey(1) & 0xFF
+            key = cv2.waitKey(1) & 0xFF # pylint: disable=no-member
             if key == ord('q'):
                 console.print("[green]Quit requested via 'q' key.[/green]")
                 break
 
-            if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1:
+            if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1: # pylint: disable=no-member
                 console.print("\n[yellow]Window was closed.[/yellow]")
                 break
 
         cap.release()
-        cv2.destroyAllWindows()
+        cv2.destroyAllWindows() # pylint: disable=no-member
 
     except KeyboardInterrupt:
         console.print("\n[red]You pressed CTRL-C. Program will exit.[/red]")
         cap.release()
-        cv2.destroyAllWindows()
+        cv2.destroyAllWindows() # pylint: disable=no-member
         sys.exit(0)
 
     except Exception as e:
         console.print(f"[red]Error in visualize_webcam: {e}[/red]")
         cap.release()
-        cv2.destroyAllWindows()
+        cv2.destroyAllWindows() # pylint: disable=no-member
         sys.exit(1)
