@@ -47,20 +47,32 @@ def dier (msg: Any) -> None:
 console = Console()
 
 @beartype
-def print_predictions_line(predictions: np.ndarray, labels: list) -> None:
-    vals = predictions[0]
-    max_index = int(np.argmax(vals))  # Index des höchsten Werts
+def print_predictions_line(predictions: np.ndarray, labels: list[str]) -> None:
+    try:
+        vals = predictions[0]
+    except (IndexError, TypeError) as e:
+        console.print(f"[red]Invalid prediction array:[/red] {e}")
+        return
 
-    parts = []
+    try:
+        max_index = int(np.argmax(vals))
+    except Exception as e:
+        console.print(f"[red]Failed to find max index:[/red] {e}")
+        return
+
+    text_line = Text()
+
     for i, (label, value) in enumerate(zip(labels, vals)):
+        formatted = f"{label}: {value:.10f}"
         if i == max_index:
-            part = f"{Style.BRIGHT}{Fore.WHITE}{Back.GREEN}{label}: {value:.10f}{Style.RESET_ALL}"
+            text_line.append(formatted, style="bold white on green")
         else:
-            part = f"{label}: {value:.10f}"
-        parts.append(part)
+            text_line.append(formatted, style="white")
+        text_line.append("  ")
 
-    line = "  ".join(parts)
-    sys.stdout.write("\r" + line + " " * 5)
+    # Replace current line in terminal
+    sys.stdout.write("\r")
+    console.print(text_line, end="")
     sys.stdout.flush()
 
 @beartype
