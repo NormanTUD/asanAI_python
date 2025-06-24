@@ -1391,9 +1391,9 @@ def show_result(msg) -> None:
 
 @beartype
 def model_is_simple_classification(model: Any) -> bool:
-    from tensorflow.keras.layers import Activation # pylint: disable=import-outside-toplevel
-    from tensorflow.keras.layers import Softmax # pylint: disable=import-outside-toplevel
-    from tensorflow.keras.layers import Dense # pylint: disable=import-outside-toplevel
+    from tensorflow.keras.layers import Activation # pylint: disable=import-outside-toplevel,import-error
+    from tensorflow.keras.layers import Softmax # pylint: disable=import-outside-toplevel,import-error
+    from tensorflow.keras.layers import Dense # pylint: disable=import-outside-toplevel,import-error
 
     try:
         if not model.layers:
