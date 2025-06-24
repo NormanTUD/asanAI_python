@@ -22,6 +22,7 @@ try:
     import unicodedata
     import signal
     import zipfile
+    import traceback
 
     import numpy as np
     import cv2
@@ -1724,7 +1725,6 @@ class GradCAMWrapper:
 
         except Exception as e:
             print("Fehler bei automatischer Grad-CAM Visualisierung:")
-            import traceback
             traceback.print_exc()
 
         return preds
