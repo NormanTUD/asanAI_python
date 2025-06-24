@@ -1723,7 +1723,7 @@ class GradCAMWrapper:
                 self.fig.canvas.flush_events()
 
         except Exception as e:
-            print("Fehler bei automatischer Grad-CAM Visualisierung:")
+            print(f"Error at-gradCAM: {e}")
             traceback.print_exc()
 
         return preds
