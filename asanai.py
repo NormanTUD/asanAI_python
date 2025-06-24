@@ -1695,7 +1695,7 @@ class GradCAMWrapper: # pylint: disable=missing-class-docstring
             else:
                 class_indices = np.zeros((preds.shape[0],), dtype=int)
 
-            for i in range(len(x)):
+            for i, img in enumerate(x):
                 img = x[i]
                 if img.ndim == 3:
                     input_img = np.expand_dims(img, axis=0)
