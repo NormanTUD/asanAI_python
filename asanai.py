@@ -34,7 +34,12 @@ try:
     from rich.table import Table
     from rich.panel import Panel
     from rich.markup import escape
+    import keras
     from beartype import beartype
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.layers import Activation
+    from tensorflow.keras.layers import Softmax
+    from tensorflow.keras.layers import Dense
 except ModuleNotFoundError as e:
     print(f"Failed ot load module: {e}")
     sys.exit(1)
@@ -1382,3 +1387,51 @@ def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
 @beartype
 def show_result(msg) -> None:
     pprint.pprint(msg)
+
+@beartype
+def model_is_simple_classification(model: Sequential) -> bool:
+    try:
+        if not model.layers:
+            return False
+
+        last_layer = model.layers[-1]
+
+        # Prüfe auf Dense mit softmax-Aktivierung
+        if isinstance(last_layer, Dense):
+            if not hasattr(last_layer, 'activation'):
+                return False
+            activation_func = last_layer.activation
+            if activation_func.__name__ != 'softmax':
+                return False
+
+        # Prüfe auf expliziten Softmax-Layer
+        elif isinstance(last_layer, (Activation, Softmax)):
+            if hasattr(last_layer, 'activation'):
+                if callable(last_layer.activation):
+                    if last_layer.activation.__name__ != 'softmax':
+                        return False
+                else:
+                    return False
+            elif isinstance(last_layer, Softmax):
+                pass  # akzeptiert
+            else:
+                return False
+        else:
+            return False
+
+        # Prüfe Ausgabeform: (?, n) -> (None, n)
+        output_shape = model.output_shape
+        if len(output_shape) != 2:
+            return False
+        if output_shape[0] is not None and output_shape[0] != -1:
+            return False
+        if not isinstance(output_shape[1], int):
+            return False
+        if output_shape[1] < 2:
+            return False
+
+        return True
+
+    except Exception as e:
+        print(f"Fehler bei der Modellprüfung: {e}")
+        return False
