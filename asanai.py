@@ -37,7 +37,6 @@ try:
     from beartype import beartype
 
     from tf_keras_vis.gradcam import Gradcam
-    from tf_keras_vis.utils.model_modifiers import ReplaceToLinear
     from tf_keras_vis.utils.scores import CategoricalScore
     import matplotlib.pyplot as plt
 except ModuleNotFoundError as e:
