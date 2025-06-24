@@ -22,7 +22,6 @@ try:
     import unicodedata
     import zipfile
 
-    from colorama import Style, Fore, Back, init
     import numpy as np
     import cv2
     from skimage import transform
@@ -36,8 +35,6 @@ try:
 except ModuleNotFoundError as e:
     print(f"Failed ot load module: {e}")
     sys.exit(1)
-
-init(autoreset=True)
 
 @beartype
 def dier (msg: Any) -> None:

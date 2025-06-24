@@ -4,6 +4,5 @@ scikit-image
 numpy
 opencv-python
 rich
-colorama
 psutil
 keras
