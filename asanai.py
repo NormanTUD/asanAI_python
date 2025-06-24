@@ -1162,20 +1162,18 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
     best_idx = int(np.argmax(probs))
 
     if len(labels) != len(probs):
-        console.print(
-            f"[bold red]❌ Label count ({len(labels)}) does not match number of prediction probabilities ({len(probs)}).[/bold red]",
-        )
-        console.print("[yellow]Make sure the number of labels in your script is correct.[/yellow]")
+        from rich import print as rprint
+        rprint(f"[bold red]❌ Label count ({len(labels)}) does not match number of prediction probabilities ({len(probs)}).[/bold red]")
+        rprint("[yellow]Make sure the number of labels in your script is correct.[/yellow]")
         sys.exit(0)
 
-    formatted_probs = _format_probabilities(probs)
+    formatted_probs = [f"{p * 100:.1f}%" for p in probs]
 
     try:
-        # Font automatisch aus Systemverzeichnissen auswählen
         font_path_candidates = [
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",    # Linux
-            "C:/Windows/Fonts/arial.ttf",                              # Windows
-            "/System/Library/Fonts/Supplemental/Arial.ttf",            # macOS
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            "C:/Windows/Fonts/arial.ttf",
+            "/System/Library/Fonts/Supplemental/Arial.ttf",
         ]
         font_path = next((fp for fp in font_path_candidates if os.path.exists(fp)), None)
         if font_path is None:
@@ -1184,45 +1182,60 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
         font_size = 20
         outline_width = 2
 
-        # OpenCV-Bild (BGR → RGB → PIL)
-        image_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))  # pylint: disable=no-member
+        image_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         draw = ImageDraw.Draw(image_pil)
         font = ImageFont.truetype(font_path, font_size)
 
-        for i, label in enumerate(labels):
-            text = f"{label}: {formatted_probs[i]}"
-            y = 30 * (i + 1)
+        bar_start_x = 300
+        bar_width = 200
+        bar_height = 20
+        line_height = 30
 
-            # Farben wie im Original
+        for i, label in enumerate(labels):
+            text_y = 10 + line_height * i
+            bar_y = text_y  # exakt gleiche y-Position für Text und Balken
+
+            text = f"{label}: {formatted_probs[i]}"
             fill_color = (0, 255, 0) if i == best_idx else (255, 0, 0)
             outline_color = (0, 0, 0)
 
-            # Text mit Outline (Rand)
             for dx in range(-outline_width, outline_width + 1):
                 for dy in range(-outline_width, outline_width + 1):
                     if dx == 0 and dy == 0:
                         continue
-                    draw.text((10 + dx, y + dy), text, font=font, fill=outline_color)
+                    draw.text((10 + dx, text_y + dy), text, font=font, fill=outline_color)
 
-            # Haupttext
-            draw.text((10, y), text, font=font, fill=fill_color)
+            draw.text((10, text_y), text, font=font, fill=fill_color)
 
-        # Zurück in OpenCV (RGB → BGR)
-        frame = cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR)  # pylint: disable=no-member
+            bar_fill_len = int(bar_width * probs[i])
+            draw.rectangle(
+                [bar_start_x, bar_y, bar_start_x + bar_width, bar_y + bar_height],
+                fill=(50, 50, 50),
+                outline=(255, 255, 255),
+            )
+            draw.rectangle(
+                [bar_start_x, bar_y, bar_start_x + bar_fill_len, bar_y + bar_height],
+                fill=fill_color
+            )
+
+        # Overlay-Text für Top-1 (kein graues Rechteck mehr)
+        overlay_text = f"Top-1: {labels[best_idx]} ({formatted_probs[best_idx]})"
+        draw.text((10, 10 + line_height * len(labels) + 10), overlay_text, font=font, fill=(255, 255, 255))
+
+        frame = cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR)
 
     except (OSError, FileNotFoundError, ValueError, AttributeError, TypeError) as specific_err:
         print("Error while drawing with Truetype-Font:", specific_err)
         traceback.print_exc()
 
-        # Fallback mit cv2.putText
         for i, label in enumerate(labels):
             text = f"{label}: {formatted_probs[i]}"
             colour = (0, 255, 0) if i == best_idx else (255, 0, 0)
-            cv2.putText(  # pylint: disable=no-member
+            cv2.putText(
                 frame,
                 text,
                 (10, 30 * (i + 1)),
-                cv2.FONT_HERSHEY_SIMPLEX,  # pylint: disable=no-member
+                cv2.FONT_HERSHEY_SIMPLEX,
                 0.8,
                 colour,
                 2,
