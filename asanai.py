@@ -39,7 +39,7 @@ try:
     from tensorflow.keras.layers import Softmax
     from tensorflow.keras.layers import Dense
 except ModuleNotFoundError as e:
-    print(f"Failed ot load module: {e}")
+    print(f"Failed to load module: {e}")
     sys.exit(1)
 
 def signal_handler(sig, frame):
