@@ -1586,7 +1586,7 @@ def visualize(model: Sequential, img_filepath: Union[Path, str]) -> None:
         else:
             print(f"Unknown output shape {output_shape}, cannot display as image.")
 
-    except cv2.error as error:
+    except cv2.error as error: # pylint: disable=no-member
         print(f"OpenCV error displaying image in visualize: {error}")
 
 @beartype
@@ -1668,7 +1668,7 @@ def visualize_webcam(
         cv2.destroyAllWindows() # pylint: disable=no-member
         sys.exit(0)
 
-    except (cv2.error, AttributeError, ValueError, TypeError, RuntimeError) as e:
+    except (cv2.error, AttributeError, ValueError, TypeError, RuntimeError) as e: # pylint: disable=no-member
         console.print(f"[red]Error in visualize_webcam: {e}[/red]")
         cap.release()
         cv2.destroyAllWindows()  # pylint: disable=no-member
