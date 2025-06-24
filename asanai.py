@@ -1721,8 +1721,12 @@ class GradCAMWrapper: # pylint: disable=missing-class-docstring
                 self.fig.canvas.draw()
                 self.fig.canvas.flush_events()
 
-        except Exception as e:
-            print(f"Error at-gradCAM: {e}")
+        except AttributeError as e:
+            print("Prediction output does not have 'ndim' or is not a valid array-like object.")
+            traceback.print_exc()
+
+        except IndexError as e:
+            print("Could not determine class indices: likely malformed prediction output.")
             traceback.print_exc()
 
         return preds
