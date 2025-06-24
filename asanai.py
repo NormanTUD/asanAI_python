@@ -1538,7 +1538,7 @@ def visualize(model: Sequential, img_filepath: Union[Path, str]) -> None:
             return
 
         img_batch = np.expand_dims(img, axis=0)
-        prediction = model.predict(img_batch)
+        prediction = model.predict(img_batch, verbose=0)
         output_shape = prediction.shape
 
         if len(output_shape) == 4:
