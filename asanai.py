@@ -22,7 +22,6 @@ try:
     import unicodedata
     import signal
     import zipfile
-    import traceback
 
     import numpy as np
     import cv2
