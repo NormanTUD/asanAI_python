@@ -53,8 +53,17 @@ def print_predictions_line(predictions: np.ndarray, labels: list[str]) -> None:
 
     try:
         max_index = int(np.argmax(vals))
-    except Exception as e:
-        console.print(f"[red]Failed to find max index:[/red] {e}")
+    except ValueError as ve:
+        console.print(f"[red]ValueError in argmax (möglicherweise leeres Array):[/red] {ve}")
+        return
+    except TypeError as te:
+        console.print(f"[red]TypeError in argmax (ungültiger Typ oder None):[/red] {te}")
+        return
+    except AttributeError as ae:
+        console.print(f"[red]AttributeError in argmax (vielleicht ist np falsch oder vals hat kein argmax):[/red] {ae}")
+        return
+    except OverflowError as oe:
+        console.print(f"[red]OverflowError beim Konvertieren in int:[/red] {oe}")
         return
 
     text_line = Text()
