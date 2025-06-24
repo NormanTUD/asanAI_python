@@ -1437,30 +1437,56 @@ def model_is_simple_classification(model: Sequential) -> bool:
 
         return True
 
-    except Exception as e:
-        print(f"Fehler bei der Modellprüfung: {e}")
+    except AttributeError as error:
+        print(f"AttributeError in model_is_simple_classification: {error}")
+        return False
+    except IndexError as error:
+        print(f"IndexError in model_is_simple_classification: {error}")
+        return False
+    except TypeError as error:
+        print(f"TypeError in model_is_simple_classification: {error}")
+        return False
+    except ValueError as error:
+        print(f"ValueError in model_is_simple_classification: {error}")
         return False
 
 @beartype
 def output_is_simple_image(model: Sequential) -> bool:
     try:
         output_shape = model.output_shape
-        # Expect shape (?, n, m, 3)
+    except AttributeError as error:
+        print(f"AttributeError in output_is_simple_image: {error}")
+        return False
+
+    try:
+        if not hasattr(output_shape, "__len__"):
+            print(f"output_shape is not iterable: {output_shape}")
+            return False
+
         if len(output_shape) != 4:
             return False
+
         batch, n, m, channels = output_shape
-        if batch is not None and batch != -1:
-            return False
-        if not (isinstance(n, int) and n > 0):
-            return False
-        if not (isinstance(m, int) and m > 0):
-            return False
-        if channels != 3:
-            return False
-        return True
-    except Exception as error:
-        print(f"Error in output_is_simple_image: {error}")
+    except TypeError as error:
+        print(f"TypeError unpacking output_shape in output_is_simple_image: {error}")
         return False
+    except ValueError as error:
+        print(f"ValueError unpacking output_shape in output_is_simple_image: {error}")
+        return False
+    except Exception as error:
+        print(f"Unexpected error unpacking output_shape in output_is_simple_image: {error}")
+        return False
+
+    if batch is not None and batch != -1:
+        return False
+    if not (isinstance(n, int) and n > 0):
+        return False
+    if not (isinstance(m, int) and m > 0):
+        return False
+    if channels != 3:
+        return False
+
+    return True
 
 
 @beartype
@@ -1480,8 +1506,11 @@ def output_is_complex_image(model: Sequential) -> bool:
         if not (isinstance(a, int) and a > 0):
             return False
         return True
-    except Exception as error:
-        print(f"Error in output_is_complex_image: {error}")
+    except TypeError as error:
+        print(f"TypeError in output_is_complex_image unpacking output_shape: {error}")
+        return False
+    except ValueError as error:
+        print(f"ValueError in output_is_complex_image unpacking output_shape: {error}")
         return False
 
 @beartype
