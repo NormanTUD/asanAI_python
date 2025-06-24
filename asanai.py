@@ -20,6 +20,7 @@ try:
     import urllib.error
     import psutil
     import unicodedata
+    import signal
     import zipfile
 
     import numpy as np
@@ -43,6 +44,13 @@ try:
 except ModuleNotFoundError as e:
     print(f"Failed ot load module: {e}")
     sys.exit(1)
+
+def signal_handler(sig, frame):
+    print("\nKeyboard interrupt received. Exiting program.")
+    cv2.destroyAllWindows()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
 
 @beartype
 def dier (msg: Any) -> None:
@@ -1435,3 +1443,212 @@ def model_is_simple_classification(model: Sequential) -> bool:
     except Exception as e:
         print(f"Fehler bei der Modellprüfung: {e}")
         return False
+
+@beartype
+def output_is_simple_image(model: Sequential) -> bool:
+    try:
+        output_shape = model.output_shape
+        # Expect shape (?, n, m, 3)
+        if len(output_shape) != 4:
+            return False
+        batch, n, m, channels = output_shape
+        if batch is not None and batch != -1:
+            return False
+        if not (isinstance(n, int) and n > 0):
+            return False
+        if not (isinstance(m, int) and m > 0):
+            return False
+        if channels != 3:
+            return False
+        return True
+    except Exception as error:
+        print(f"Error in output_is_simple_image: {error}")
+        return False
+
+
+@beartype
+def output_is_complex_image(model: Sequential) -> bool:
+    try:
+        output_shape = model.output_shape
+        # Expect shape (?, n, m, a) with a ∈ N (a > 0)
+        if len(output_shape) != 4:
+            return False
+        batch, n, m, a = output_shape
+        if batch is not None and batch != -1:
+            return False
+        if not (isinstance(n, int) and n > 0):
+            return False
+        if not (isinstance(m, int) and m > 0):
+            return False
+        if not (isinstance(a, int) and a > 0):
+            return False
+        return True
+    except Exception as error:
+        print(f"Error in output_is_complex_image: {error}")
+        return False
+
+@beartype
+def visualize(model: Sequential, img_filepath: Union[Path, str]) -> None:
+    try:
+        img = load(img_filepath)
+        if img is None:
+            print("Failed to load the image. Visualization aborted.")
+            return
+
+        img = np.squeeze(img)
+        if len(img.shape) != 3:
+            print(f"Unexpected image shape after squeeze: {img.shape}")
+            return
+
+        expected_shape = model.input_shape
+        if len(expected_shape) != 4:
+            print(f"Unexpected model input shape: {expected_shape}")
+            return
+
+        _, expected_height, expected_width, expected_channels = expected_shape
+
+        if img.shape[0] != expected_height or img.shape[1] != expected_width:
+            img = cv2.resize(img, (expected_width, expected_height))
+
+        if img.shape[2] != expected_channels:
+            print(f"Channel mismatch: image has {img.shape[2]}, model expects {expected_channels}")
+            return
+
+        img_batch = np.expand_dims(img, axis=0)
+        prediction = model.predict(img_batch)
+        output_shape = prediction.shape
+
+        if len(output_shape) == 4:
+            output_img = prediction[0]
+            output_img = np.clip(output_img, 0, 1)
+            num_channels = output_img.shape[-1]
+
+            if num_channels == 3:
+                display_img = (output_img * 255).astype(np.uint8)
+                display_img = cv2.cvtColor(display_img, cv2.COLOR_RGB2BGR)
+                window_name = "Model Output - Color"
+                cv2.imshow(window_name, display_img)
+
+            else:
+                gray_imgs = []
+                for c in range(num_channels):
+                    channel = output_img[..., c]
+                    ch_min = channel.min()
+                    ch_max = channel.max()
+                    if ch_max > ch_min:
+                        norm_channel = (channel - ch_min) / (ch_max - ch_min)
+                    else:
+                        norm_channel = np.zeros_like(channel)
+                    gray_img = (norm_channel * 255).astype(np.uint8)
+                    gray_imgs.append(gray_img)
+
+                combined_img = np.hstack(gray_imgs)
+                window_name = f"Model Output - {num_channels} grayscale channels"
+                cv2.imshow(window_name, combined_img)
+
+            # Wait until window is closed or a key is pressed, or Ctrl+C is triggered
+            while True:
+                key = cv2.waitKey(100)  # Wait 100ms
+                # If window closed, getWindowProperty returns <0
+                if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1:
+                    break
+                # If key pressed (any key), also break
+                if key != -1:
+                    break
+
+            cv2.destroyAllWindows()
+
+        elif len(output_shape) == 2:
+            print("Model output is 2D - cannot display as image.")
+        else:
+            print(f"Unknown output shape {output_shape}, cannot display as image.")
+
+    except Exception as error:
+        print(f"Error in visualize: {error}")
+
+@beartype
+def visualize_webcam(
+    model: Sequential,
+    height: int = 224,
+    width: int = 224,
+    divide_by: Union[int, float] = 255.0,
+) -> None:
+    import asanai
+
+    try:
+        cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            console.print("[red]Could not open webcam.[/red]")
+            return
+
+        window_name = "Model Output Webcam"
+
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                console.print("[red]Could not load frame from webcam. Is the webcam currently in use?[/red]")
+                sys.exit(1)
+
+            # Preprocess frame for model input
+            image = asanai.load_frame(frame, height, width, divide_by)
+
+            if image is not None:
+                predictions = model.predict(image, verbose=0)
+                output = predictions[0]  # remove batch dim
+                output = np.clip(output, 0, 1)
+
+                if len(output.shape) == 3:
+                    num_channels = output.shape[-1]
+
+                    if num_channels == 3:
+                        disp_img = (output * 255).astype(np.uint8)
+                        disp_img = cv2.cvtColor(disp_img, cv2.COLOR_RGB2BGR)
+                        cv2.imshow(window_name, disp_img)
+
+                    elif num_channels != 3:
+                        gray_imgs = []
+                        for c in range(num_channels):
+                            channel = output[..., c]
+                            ch_min = channel.min()
+                            ch_max = channel.max()
+                            if ch_max > ch_min:
+                                norm_channel = (channel - ch_min) / (ch_max - ch_min)
+                            else:
+                                norm_channel = np.zeros_like(channel)
+                            gray_img = (norm_channel * 255).astype(np.uint8)
+                            gray_imgs.append(gray_img)
+
+                        combined_img = np.hstack(gray_imgs)
+                        cv2.imshow(window_name, combined_img)
+
+                    else:
+                        console.print(f"[yellow]Unsupported model output shape for display: {output.shape}[/yellow]")
+                else:
+                    console.print(f"[yellow]Unsupported model output shape for display: {output.shape}[/yellow]")
+
+            else:
+                console.print("[red]Failed to preprocess webcam frame for model.[/red]")
+
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord('q'):
+                console.print("[green]Quit requested via 'q' key.[/green]")
+                break
+
+            if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1:
+                console.print("\n[yellow]Window was closed.[/yellow]")
+                break
+
+        cap.release()
+        cv2.destroyAllWindows()
+
+    except KeyboardInterrupt:
+        console.print("\n[red]You pressed CTRL-C. Program will exit.[/red]")
+        cap.release()
+        cv2.destroyAllWindows()
+        sys.exit(0)
+
+    except Exception as e:
+        console.print(f"[red]Error in visualize_webcam: {e}[/red]")
+        cap.release()
+        cv2.destroyAllWindows()
+        sys.exit(1)
