@@ -1333,14 +1333,33 @@ def _convert_to_ndarray(values: list[str], expected_shape: Any) -> np.ndarray:
     return arr
 
 # pylint: disable=too-many-branches
+
+@beartype
+def _exit_with_error(message: str) -> None:
+    console.print(f"[red]✘ {message}[/red]")
+    sys.exit(1)
+
+@beartype
+def _is_float_list(values: list[str]) -> bool:
+    try:
+        _ = [float(v) for v in values]
+        return True
+    except ValueError:
+        return False
+
+@beartype
+def _convert_to_ndarray(values: list[str], shape: tuple[int, ...]) -> np.ndarray:
+    floats = [float(v) for v in values]
+    array = np.array(floats, dtype=np.float32)
+    return array.reshape(shape)
+
 @beartype
 def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
-    input_shape = model.input_shape  # e.g. (None, 5, 10)
-    if input_shape[0] is None:
-        expected_shape = input_shape[1:]
-    else:
-        expected_shape = input_shape
+    input_shape = model.input_shape
+    expected_shape = input_shape[1:] if input_shape[0] is None else input_shape
+    expected_size = int(np.prod(expected_shape))
 
+    # Try to load data from file
     if os.path.isfile(filename):
         try:
             data = np.loadtxt(filename)
@@ -1353,56 +1372,45 @@ def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
         except OSError as e:
             _exit_with_error(f"I/O error while reading '{filename}': {e}")
 
-        expected_size = np.prod(expected_shape)
         if data.size != expected_size:
             _exit_with_error(
                 f"Data size mismatch. File contains {data.size} elements, "
-                f"but model expects input size {expected_size}."
+                f"but model expects {expected_size}."
             )
 
         try:
-            data = data.reshape(expected_shape)
-        except ValueError as e:
-            _exit_with_error(f"Cannot reshape data to {expected_shape}: {e}")
-        except TypeError as e:
-            _exit_with_error(f"Invalid shape argument {expected_shape}: {e}")
+            reshaped_data = data.reshape(expected_shape)
+        except (ValueError, TypeError) as e:
+            _exit_with_error(f"Failed to reshape data to {expected_shape}: {e}")
 
-        if not np.issubdtype(data.dtype, np.floating):
-            _exit_with_error(f"Data type is not float, but {data.dtype}.")
+        if not np.issubdtype(reshaped_data.dtype, np.floating):
+            _exit_with_error(f"Data type is not float, but {reshaped_data.dtype}.")
 
-        return data
+        return reshaped_data
 
-    total_values = np.prod(expected_shape)
-
+    # Manual input fallback
     while True:
-        console.print(f"Please enter {total_values} float values separated by spaces:")
+        console.print(f"Please enter [bold]{expected_size}[/bold] float values separated by spaces:")
         try:
             user_input = input().strip()
         except KeyboardInterrupt:
-            console.print("[yellow]You cancelled with CTRL C[/yellow]")
+            console.print("[yellow]✘ Input cancelled with CTRL+C[/yellow]")
             sys.exit(1)
-
-        except ValueError as e:
-            console.print(f"[red]Failed to convert or reshape manual input to {expected_shape}: {e}. Please try again.[/red]")
-            continue
-        except TypeError as e:
-            console.print(f"[red]Invalid shape argument {expected_shape}: {e}. Please try again.[/red]")
-            continue
 
         values = user_input.split()
 
-        if len(values) != total_values:
-            console.print(f"[red]Incorrect number of values entered ({len(values)}), expected {total_values}. Please try again.[/red]")
+        if len(values) != expected_size:
+            console.print(f"[red]✘ Entered {len(values)} values, expected {expected_size}[/red]")
             continue
 
         if not _is_float_list(values):
-            console.print("[red]Input contains non-float values. Please try again.[/red]")
+            console.print("[red]✘ Input contains non-float values[/red]")
             continue
 
         try:
             return _convert_to_ndarray(values, expected_shape)
-        except ValueError as e:
-            console.print(f"[red]Error trying to convert to Numpy-Array: {e}[/red]")
+        except (ValueError, TypeError) as e:
+            console.print(f"[red]✘ Error converting input to array: {e}[/red]")
             continue
 
 @beartype
@@ -1537,31 +1545,81 @@ def output_is_complex_image(model: Any) -> bool:
         print(f"ValueError in output_is_complex_image unpacking output_shape: {error}")
         return False
 
+def _load_and_prepare_image(img_filepath: Union[Path, str], model: Any) -> Union[np.ndarray, None]:
+    img = load(img_filepath)
+    if img is None:
+        print("Failed to load the image. Visualization aborted.")
+        return None
+
+    img = np.squeeze(img)
+    if len(img.shape) != 3:
+        print(f"Unexpected image shape after squeeze: {img.shape}")
+        return None
+
+    input_shape = model.input_shape
+    if len(input_shape) != 4:
+        print(f"Unexpected model input shape: {input_shape}")
+        return None
+
+    _, expected_height, expected_width, expected_channels = input_shape
+
+    if img.shape[0] != expected_height or img.shape[1] != expected_width:
+        try:
+            img = cv2.resize(img, (expected_width, expected_height))  # pylint: disable=no-member
+        except cv2.error as e:
+            print(f"Error resizing image: {e}")
+            return None
+
+    if img.shape[2] != expected_channels:
+        print(f"Channel mismatch: image has {img.shape[2]}, model expects {expected_channels}")
+        return None
+
+    return img
+
+
+def _normalize_and_convert_to_uint8(channel: np.ndarray) -> np.ndarray:
+    ch_min = channel.min()
+    ch_max = channel.max()
+    if ch_max > ch_min:
+        norm_channel = (channel - ch_min) / (ch_max - ch_min)
+    else:
+        norm_channel = np.zeros_like(channel)
+    return (norm_channel * 255).astype(np.uint8)
+
+
+def _show_image_in_window(image: np.ndarray, window_name: str) -> None:
+    cv2.imshow(window_name, image)  # pylint: disable=no-member
+    while True:
+        key = cv2.waitKey(100)  # pylint: disable=no-member
+        if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1:  # pylint: disable=no-member
+            break
+        if key != -1:
+            break
+    cv2.destroyAllWindows()  # pylint: disable=no-member
+
+
+def _visualize_color_image(output_img: np.ndarray) -> None:
+    display_img = (output_img * 255).astype(np.uint8)
+    display_img = cv2.cvtColor(display_img, cv2.COLOR_RGB2BGR)  # pylint: disable=no-member
+    _show_image_in_window(display_img, "Model Output - Color")
+
+
+def _visualize_grayscale_channels(output_img: np.ndarray) -> None:
+    num_channels = output_img.shape[-1]
+    gray_imgs = [
+        _normalize_and_convert_to_uint8(output_img[..., c])
+        for c in range(num_channels)
+    ]
+    combined_img = np.hstack(gray_imgs)
+    window_name = f"Model Output - {num_channels} grayscale channels"
+    _show_image_in_window(combined_img, window_name)
+
+
 @beartype
 def visualize(model: Any, img_filepath: Union[Path, str]) -> None:
     try:
-        img = load(img_filepath)
+        img = _load_and_prepare_image(img_filepath, model)
         if img is None:
-            print("Failed to load the image. Visualization aborted.")
-            return
-
-        img = np.squeeze(img)
-        if len(img.shape) != 3:
-            print(f"Unexpected image shape after squeeze: {img.shape}")
-            return
-
-        expected_shape = model.input_shape
-        if len(expected_shape) != 4:
-            print(f"Unexpected model input shape: {expected_shape}")
-            return
-
-        _, expected_height, expected_width, expected_channels = expected_shape
-
-        if img.shape[0] != expected_height or img.shape[1] != expected_width:
-            img = cv2.resize(img, (expected_width, expected_height)) # pylint: disable=no-member
-
-        if img.shape[2] != expected_channels:
-            print(f"Channel mismatch: image has {img.shape[2]}, model expects {expected_channels}")
             return
 
         img_batch = np.expand_dims(img, axis=0)
@@ -1574,46 +1632,16 @@ def visualize(model: Any, img_filepath: Union[Path, str]) -> None:
             num_channels = output_img.shape[-1]
 
             if num_channels == 3:
-                display_img = (output_img * 255).astype(np.uint8)
-                display_img = cv2.cvtColor(display_img, cv2.COLOR_RGB2BGR) # pylint: disable=no-member
-                window_name = "Model Output - Color"
-                cv2.imshow(window_name, display_img) # pylint: disable=no-member
-
+                _visualize_color_image(output_img)
             else:
-                gray_imgs = []
-                for c in range(num_channels):
-                    channel = output_img[..., c]
-                    ch_min = channel.min()
-                    ch_max = channel.max()
-                    if ch_max > ch_min:
-                        norm_channel = (channel - ch_min) / (ch_max - ch_min)
-                    else:
-                        norm_channel = np.zeros_like(channel)
-                    gray_img = (norm_channel * 255).astype(np.uint8)
-                    gray_imgs.append(gray_img)
-
-                combined_img = np.hstack(gray_imgs)
-                window_name = f"Model Output - {num_channels} grayscale channels"
-                cv2.imshow(window_name, combined_img) # pylint: disable=no-member
-
-            # Wait until window is closed or a key is pressed, or Ctrl+C is triggered
-            while True:
-                key = cv2.waitKey(100)  # pylint: disable=no-member
-                # If window closed, getWindowProperty returns <0
-                if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1: # pylint: disable=no-member
-                    break
-                # If key pressed (any key), also break
-                if key != -1:
-                    break
-
-            cv2.destroyAllWindows() # pylint: disable=no-member
+                _visualize_grayscale_channels(output_img)
 
         elif len(output_shape) == 2:
             print("Model output is 2D - cannot display as image.")
         else:
             print(f"Unknown output shape {output_shape}, cannot display as image.")
 
-    except cv2.error as error: # pylint: disable=no-member
+    except cv2.error as error:  # pylint: disable=no-member
         print(f"OpenCV error displaying image in visualize: {error}")
 
 @beartype
