@@ -959,35 +959,20 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
 
     rule("[bold cyan]Trying to convert downloaded model files[/]")
 
-    files = find_model_files(directory)
+    tfjs_model_json, weights_bin = locate_tfjs_model_files(directory)
 
-    original_tfjs_model_json = str(files.get("model.json"))
-    original_weights_bin = str(files.get("model.weights.bin"))
-
-    if not os.path.exists(original_tfjs_model_json) or not os.path.exists(original_weights_bin):
-        find_and_extract_model_zip_file_if_exists()
-
-        files = find_model_files(directory)
-
-        original_tfjs_model_json = str(files.get("model.json"))
-        original_weights_bin = str(files.get("model.weights.bin"))
-
-    if not os.path.exists(original_tfjs_model_json) or not os.path.exists(original_weights_bin):
+    if not tfjs_model_json or not weights_bin:
         console.print("[red]No model.json and/or model.weights.bin found. Cannot continue. Have you downloaded the models from asanAI? If not, do so and put them in the same folder as your script.[/red]")
         sys.exit(1)
 
-    if not os.path.exists(original_tfjs_model_json):
-        console.print(f"[yellow]⚠ Conversion not possible:[/] '{original_tfjs_model_json}' not found.")
-        return False
+    console.print(f"[cyan]Conversion needed:[/] '{keras_h5_file}' does not exist, but '{tfjs_model_json}' found.")
 
-    tfjs_model_json, weights_bin = copy_and_patch_tfjs(original_tfjs_model_json, original_weights_bin)
+    tfjs_model_json, weights_bin = copy_and_patch_tfjs(tfjs_model_json, weights_bin)
 
     if not tfjs_model_json or not weights_bin:
         console.log("[red]Missing model files. Conversion aborted.[/red]")
         delete_tmp_files(tfjs_model_json, weights_bin)
         return False
-
-    console.print(f"[cyan]Conversion needed:[/] '{keras_h5_file}' does not exist, but '{original_tfjs_model_json}' found.")
 
     conversion_args = [
         '--input_format=tfjs_layers_model',
@@ -1002,8 +987,38 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
 
     update_wsl_if_windows()
 
-    if not check_docker_and_try_to_install(tfjs_model_json, weights_bin):
-        return False
+    if check_docker_and_try_to_install(tfjs_model_json, weights_bin):
+        if run_docker_conversion(tfjs_model_json, weights_bin, conversion_args):
+            delete_tmp_files(tfjs_model_json, weights_bin)
+            return True
+
+    delete_tmp_files(tfjs_model_json, weights_bin)
+    return False
+
+
+def locate_tfjs_model_files(directory: Union[str, Path]) -> tuple[Optional[str], Optional[str]]:
+    from your_module import find_model_files, find_and_extract_model_zip_file_if_exists
+
+    files = find_model_files(directory)
+    model_json = str(files.get("model.json")) if files.get("model.json") else None
+    weights_bin = str(files.get("model.weights.bin")) if files.get("model.weights.bin") else None
+
+    if model_json and weights_bin and os.path.exists(model_json) and os.path.exists(weights_bin):
+        return model_json, weights_bin
+
+    find_and_extract_model_zip_file_if_exists()
+    files = find_model_files(directory)
+    model_json = str(files.get("model.json")) if files.get("model.json") else None
+    weights_bin = str(files.get("model.weights.bin")) if files.get("model.weights.bin") else None
+
+    if model_json and weights_bin and os.path.exists(model_json) and os.path.exists(weights_bin):
+        return model_json, weights_bin
+
+    return None, None
+
+
+def run_docker_conversion(tfjs_model_json: str, weights_bin: str, conversion_args: list[str]) -> bool:
+    from your_module import start_docker_if_not_running
 
     start_docker_if_not_running()
 
@@ -1011,13 +1026,42 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
         subprocess.run(['docker', 'info'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except subprocess.CalledProcessError:
         console.print("[red]✘ Docker daemon not running or inaccessible. Cannot perform fallback conversion.[/]")
-        delete_tmp_files(tfjs_model_json, weights_bin)
         return False
 
     with tempfile.TemporaryDirectory() as tmpdir:
         dockerfile_path = os.path.join(tmpdir, 'Dockerfile')
+        image_name = 'tfjs_converter_py310_dynamic'
 
-        dockerfile_content = '''FROM python:3.10-slim
+        write_dockerfile(dockerfile_path)
+
+        if not build_docker_image(image_name, dockerfile_path, tmpdir):
+            return False
+
+        run_cmd = [
+            'docker', 'run', '--rm',
+            '-v', f"{os.path.abspath(os.getcwd())}:/app",
+            image_name,
+            'tensorflowjs_converter',
+        ] + conversion_args
+
+        with console.status("[bold green]Running conversion inside Docker container..."):
+            try:
+                run_process = subprocess.run(run_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                console.print("[green]✔ Conversion inside Docker container succeeded.[/]")
+                console.print(Text(run_process.stdout.strip(), style="dim"))
+                return True
+            except subprocess.CalledProcessError as e:
+                console.print("[red]✘ Conversion inside Docker container failed with error:[/]")
+                console.print(Text(e.stderr.strip(), style="bold red"))
+            except KeyboardInterrupt:
+                console.print("[red]✘ Docker run was cancelled by CTRL-C[/]")
+                sys.exit(0)
+
+    return False
+
+
+def write_dockerfile(path: str) -> None:
+    dockerfile_content = '''FROM python:3.10-slim
 
 RUN apt-get update && \\
     apt-get install -y --no-install-recommends build-essential curl && \\
@@ -1035,61 +1079,33 @@ WORKDIR /app
 
 CMD ["/bin/bash"]
 '''
-        with open(dockerfile_path, mode='w', encoding="utf-8") as f:
-            f.write(dockerfile_content)
+    with open(path, mode='w', encoding="utf-8") as f:
+        f.write(dockerfile_content)
 
-        image_name = 'tfjs_converter_py310_dynamic'
 
-        console.print("[cyan]Building Docker image for fallback conversion. This may take some time...[/]")
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            transient=True,
-            console=console
-        ) as progress:
-            build_task = progress.add_task("Building Docker image...", total=None)
-            try:
-                build_cmd = ['docker', 'build', '-t', image_name, '-f', dockerfile_path, tmpdir]
-                subprocess.run(build_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                progress.update(build_task, description="Docker image built successfully.")
-            except subprocess.CalledProcessError as e:
-                progress.stop()
-                console.print("[red]✘ Docker build failed with error:[/]")
-                console.print(Text(e.stderr.strip(), style="bold red"))
-                delete_tmp_files(tfjs_model_json, weights_bin)
-                return False
-            except KeyboardInterrupt:
-                progress.stop()
-                console.print("[red]✘ Docker build was cancelled by CTRL-C[/]")
-                delete_tmp_files(tfjs_model_json, weights_bin)
-                sys.exit(0)
-
-        run_cmd = [
-            'docker', 'run', '--rm',
-            '-v', f"{os.path.abspath(os.getcwd())}:/app",
-            image_name,
-            'tensorflowjs_converter',
-        ] + conversion_args
-
-        with console.status("[bold green]Running conversion inside Docker container..."):
-            try:
-                run_process = subprocess.run(run_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                console.print("[green]✔ Conversion inside Docker container succeeded.[/]")
-                console.print(Text(run_process.stdout.strip(), style="dim"))
-            except subprocess.CalledProcessError as e:
-                console.print("[red]✘ Conversion inside Docker container failed with error:[/]")
-                console.print(Text(e.stderr.strip(), style="bold red"))
-                delete_tmp_files(tfjs_model_json, weights_bin)
-                return False
-            except KeyboardInterrupt:
-                console.print("[red]✘ Docker build was cancelled by CTRL-C[/]")
-                delete_tmp_files(tfjs_model_json, weights_bin)
-                sys.exit(0)
-
-    delete_tmp_files(tfjs_model_json, weights_bin)
-
-    return True
+def build_docker_image(image_name: str, dockerfile_path: str, context_path: str) -> bool:
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        transient=True,
+        console=console
+    ) as progress:
+        task = progress.add_task("Building Docker image...", total=None)
+        try:
+            cmd = ['docker', 'build', '-t', image_name, '-f', dockerfile_path, context_path]
+            subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            progress.update(task, description="Docker image built successfully.")
+            return True
+        except subprocess.CalledProcessError as e:
+            progress.stop()
+            console.print("[red]✘ Docker build failed with error:[/]")
+            console.print(Text(e.stderr.strip(), style="bold red"))
+        except KeyboardInterrupt:
+            progress.stop()
+            console.print("[red]✘ Docker build was cancelled by CTRL-C[/]")
+            sys.exit(0)
+    return False
 
 @beartype
 def load(filename: Union[Path, str], height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> Optional[np.ndarray]:
