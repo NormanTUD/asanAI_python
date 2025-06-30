@@ -1310,11 +1310,6 @@ def get_shape(filename: Union[str, Path]) -> Optional[list[int]]:
         return None
 
 @beartype
-def _exit_with_error(msg: str) -> None:
-    console.print(f"[bold red]ERROR:[/bold red] {msg}")
-    sys.exit(1)
-
-@beartype
 def _is_float_list(lst) -> bool:
     try:
         any(float(x) for x in lst)
@@ -1334,20 +1329,6 @@ def _convert_to_ndarray(values: list[str], expected_shape: Any) -> np.ndarray:
 def _exit_with_error(message: str) -> None:
     console.print(f"[red]✘ {message}[/red]")
     sys.exit(1)
-
-@beartype
-def _is_float_list(values: list[str]) -> bool:
-    try:
-        _ = [float(v) for v in values]
-        return True
-    except ValueError:
-        return False
-
-@beartype
-def _convert_to_ndarray(values: list[str], shape: tuple[int, ...]) -> np.ndarray:
-    floats = [float(v) for v in values]
-    array = np.array(floats, dtype=np.float32)
-    return array.reshape(shape)
 
 @beartype
 def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
