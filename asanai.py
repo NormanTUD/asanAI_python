@@ -215,7 +215,7 @@ def download_file(url: str, dest_path: str) -> bool:
         return False
 
 @beartype
-def run_installer(installer_path: str) -> bool:
+def run_ms_visual_cpp_installer(installer_path: str) -> bool:
     try:
         # subprocess.run waits for the process to finish
         result = subprocess.run([installer_path, '/install', '/quiet', '/norestart'], check=False)
@@ -276,7 +276,7 @@ def download_and_install_ms_visual_cpp() -> None:
         sys.exit(1)
 
     print("Starting installation...")
-    success = run_installer(filepath)
+    success = run_ms_visual_cpp_installer(filepath)
     if not success:
         print("Installation failed.")
         sys.exit(1)
