@@ -1393,66 +1393,74 @@ def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
 def show_result(msg) -> None:
     pprint(msg)
 
+
 @beartype
 def model_is_simple_classification(model: Any) -> bool:
-    from tensorflow.keras.layers import Activation # pylint: disable=import-outside-toplevel,import-error
-    from tensorflow.keras.layers import Softmax # pylint: disable=import-outside-toplevel,import-error
-    from tensorflow.keras.layers import Dense # pylint: disable=import-outside-toplevel,import-error
-
     try:
-        if not model.layers:
+        if not hasattr(model, "layers") or not model.layers:
             return False
 
         last_layer = model.layers[-1]
 
-        # Prüfe auf Dense mit softmax-Aktivierung
-        if isinstance(last_layer, Dense):
-            if not hasattr(last_layer, 'activation'):
-                return False
-            activation_func = last_layer.activation
-            if activation_func.__name__ != 'softmax':
-                return False
-
-        # Prüfe auf expliziten Softmax-Layer
-        elif isinstance(last_layer, (Activation, Softmax)):
-            if hasattr(last_layer, 'activation'):
-                if callable(last_layer.activation):
-                    if last_layer.activation.__name__ != 'softmax':
-                        return False
-                else:
-                    return False
-            elif isinstance(last_layer, Softmax):
-                pass  # akzeptiert
-            else:
-                return False
-        else:
+        if not _is_softmax_output_layer(last_layer):
             return False
 
-        # Prüfe Ausgabeform: (?, n) -> (None, n)
-        output_shape = model.output_shape
-        if len(output_shape) != 2:
-            return False
-        if output_shape[0] is not None and output_shape[0] != -1:
-            return False
-        if not isinstance(output_shape[1], int):
-            return False
-        if output_shape[1] < 2:
+        if not _has_classification_output_shape(model):
             return False
 
         return True
 
-    except AttributeError as error:
-        print(f"AttributeError in model_is_simple_classification: {error}")
+    except (AttributeError, IndexError, TypeError, ValueError) as error:
+        print(f"{type(error).__name__} in model_is_simple_classification: {error}")
         return False
-    except IndexError as error:
-        print(f"IndexError in model_is_simple_classification: {error}")
+
+
+@beartype
+def _is_softmax_output_layer(layer: Any) -> bool:
+    from tensorflow.keras.layers import Activation  # pylint: disable=import-outside-toplevel, import-error
+    from tensorflow.keras.layers import Softmax     # pylint: disable=import-outside-toplevel, import-error
+    from tensorflow.keras.layers import Dense       # pylint: disable=import-outside-toplevel, import-error
+
+    if isinstance(layer, Dense):
+        if hasattr(layer, 'activation') and callable(layer.activation):
+            return layer.activation.__name__ == 'softmax'
         return False
-    except TypeError as error:
-        print(f"TypeError in model_is_simple_classification: {error}")
+
+    if isinstance(layer, Activation):
+        return (
+            hasattr(layer, 'activation') and
+            callable(layer.activation) and
+            layer.activation.__name__ == 'softmax'
+        )
+
+    if isinstance(layer, Softmax):
+        return True
+
+    return False
+
+
+@beartype
+def _has_classification_output_shape(model: Any) -> bool:
+    if not hasattr(model, "output_shape"):
         return False
-    except ValueError as error:
-        print(f"ValueError in model_is_simple_classification: {error}")
+
+    output_shape = model.output_shape
+
+    if not isinstance(output_shape, (tuple, list)):
         return False
+
+    if len(output_shape) != 2:
+        return False
+
+    batch_dim, class_dim = output_shape
+
+    if batch_dim not in (None, -1):
+        return False
+
+    if not isinstance(class_dim, int) or class_dim < 2:
+        return False
+
+    return True
 
 @beartype
 def output_is_simple_image(model: Any) -> bool:
