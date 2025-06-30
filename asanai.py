@@ -996,7 +996,10 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
     return False
 
 @beartype
-def locate_tfjs_model_files(directory: Union[str, Path]) -> tuple[Optional[str], Optional[str]]:
+def locate_tfjs_model_files(directory: Optional[Union[str, Path]]) -> tuple[Optional[str], Optional[str]]:
+    if directory is None:
+        return None, None
+
     files = find_model_files(directory)
     model_json = str(files.get("model.json")) if files.get("model.json") else None
     weights_bin = str(files.get("model.weights.bin")) if files.get("model.weights.bin") else None
