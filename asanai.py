@@ -988,7 +988,7 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
     update_wsl_if_windows()
 
     if check_docker_and_try_to_install(tfjs_model_json, weights_bin):
-        if run_docker_conversion(tfjs_model_json, weights_bin, conversion_args):
+        if run_docker_conversion(conversion_args):
             delete_tmp_files(tfjs_model_json, weights_bin)
             return True
 
@@ -997,8 +997,6 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
 
 @beartype
 def locate_tfjs_model_files(directory: Union[str, Path]) -> tuple[Optional[str], Optional[str]]:
-    from your_module import find_model_files, find_and_extract_model_zip_file_if_exists
-
     files = find_model_files(directory)
     model_json = str(files.get("model.json")) if files.get("model.json") else None
     weights_bin = str(files.get("model.weights.bin")) if files.get("model.weights.bin") else None
@@ -1017,9 +1015,7 @@ def locate_tfjs_model_files(directory: Union[str, Path]) -> tuple[Optional[str],
     return None, None
 
 @beartype
-def run_docker_conversion(tfjs_model_json: str, weights_bin: str, conversion_args: list[str]) -> bool:
-    from your_module import start_docker_if_not_running
-
+def run_docker_conversion(conversion_args: list[str]) -> bool:
     start_docker_if_not_running()
 
     try:
@@ -1441,9 +1437,9 @@ def model_is_simple_classification(model: Any) -> bool:
 
 @beartype
 def _is_softmax_output_layer(layer: Any) -> bool:
-    from tensorflow.keras.layers import Activation  # pylint: disable=import-outside-toplevel, import-error
-    from tensorflow.keras.layers import Softmax     # pylint: disable=import-outside-toplevel, import-error
-    from tensorflow.keras.layers import Dense       # pylint: disable=import-outside-toplevel, import-error
+    from tensorflow.keras.layers import Activation  # pylint: disable=import-outside-toplevel, import-error, no-name-in-module
+    from tensorflow.keras.layers import Softmax     # pylint: disable=import-outside-toplevel, import-error, no-name-in-module
+    from tensorflow.keras.layers import Dense       # pylint: disable=import-outside-toplevel, import-error, no-name-in-module
 
     if isinstance(layer, Dense):
         if hasattr(layer, 'activation') and callable(layer.activation):
@@ -1566,7 +1562,7 @@ def _load_and_prepare_image(img_filepath: Union[Path, str], model: Any) -> Union
     if img.shape[0] != expected_height or img.shape[1] != expected_width:
         try:
             img = cv2.resize(img, (expected_width, expected_height))  # pylint: disable=no-member
-        except cv2.error as e:
+        except cv2.error as e: # pylint: disable=no-member
             print(f"Error resizing image: {e}")
             return None
 
