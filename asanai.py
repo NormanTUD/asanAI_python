@@ -995,7 +995,7 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
     delete_tmp_files(tfjs_model_json, weights_bin)
     return False
 
-
+@beartype
 def locate_tfjs_model_files(directory: Union[str, Path]) -> tuple[Optional[str], Optional[str]]:
     from your_module import find_model_files, find_and_extract_model_zip_file_if_exists
 
@@ -1016,7 +1016,7 @@ def locate_tfjs_model_files(directory: Union[str, Path]) -> tuple[Optional[str],
 
     return None, None
 
-
+@beartype
 def run_docker_conversion(tfjs_model_json: str, weights_bin: str, conversion_args: list[str]) -> bool:
     from your_module import start_docker_if_not_running
 
@@ -1059,7 +1059,7 @@ def run_docker_conversion(tfjs_model_json: str, weights_bin: str, conversion_arg
 
     return False
 
-
+@beartype
 def write_dockerfile(path: str) -> None:
     dockerfile_content = '''FROM python:3.10-slim
 
@@ -1082,7 +1082,7 @@ CMD ["/bin/bash"]
     with open(path, mode='w', encoding="utf-8") as f:
         f.write(dockerfile_content)
 
-
+@beartype
 def build_docker_image(image_name: str, dockerfile_path: str, context_path: str) -> bool:
     with Progress(
         SpinnerColumn(),
@@ -1576,7 +1576,7 @@ def _load_and_prepare_image(img_filepath: Union[Path, str], model: Any) -> Union
 
     return img
 
-
+@beartype
 def _normalize_and_convert_to_uint8(channel: np.ndarray) -> np.ndarray:
     ch_min = channel.min()
     ch_max = channel.max()
@@ -1586,7 +1586,7 @@ def _normalize_and_convert_to_uint8(channel: np.ndarray) -> np.ndarray:
         norm_channel = np.zeros_like(channel)
     return (norm_channel * 255).astype(np.uint8)
 
-
+@beartype
 def _show_image_in_window(image: np.ndarray, window_name: str) -> None:
     cv2.imshow(window_name, image)  # pylint: disable=no-member
     while True:
@@ -1597,13 +1597,13 @@ def _show_image_in_window(image: np.ndarray, window_name: str) -> None:
             break
     cv2.destroyAllWindows()  # pylint: disable=no-member
 
-
+@beartype
 def _visualize_color_image(output_img: np.ndarray) -> None:
     display_img = (output_img * 255).astype(np.uint8)
     display_img = cv2.cvtColor(display_img, cv2.COLOR_RGB2BGR)  # pylint: disable=no-member
     _show_image_in_window(display_img, "Model Output - Color")
 
-
+@beartype
 def _visualize_grayscale_channels(output_img: np.ndarray) -> None:
     num_channels = output_img.shape[-1]
     gray_imgs = [
