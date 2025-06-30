@@ -1525,6 +1525,7 @@ def output_is_complex_image(model: Any) -> bool:
         print(f"ValueError in output_is_complex_image unpacking output_shape: {error}")
         return False
 
+@beartype
 def _load_and_prepare_image(img_filepath: Union[Path, str], model: Any) -> Union[np.ndarray, None]:
     img = load(img_filepath)
     if img is None:
