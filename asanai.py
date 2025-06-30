@@ -38,7 +38,8 @@ except ModuleNotFoundError as e:
     print(f"Failed to load module: {e}")
     sys.exit(1)
 
-def signal_handler(sig, frame):
+@beartype
+def signal_handler(sig: Any, frame: Any) -> None:
     print(f"\nKeyboard interrupt received. Exiting program. Got signal {sig}, frame {frame}")
     cv2.destroyAllWindows() # pylint: disable=no-member
     sys.exit(0)
@@ -1484,7 +1485,6 @@ def output_is_simple_image(model: Any) -> bool:
         return False
 
     return True
-
 
 @beartype
 def output_is_complex_image(model: Any) -> bool:
