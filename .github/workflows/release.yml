@@ -1,4 +1,4 @@
-name: CIAndRelease
+name: CI
 
 on:
   push:
