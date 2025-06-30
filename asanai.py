@@ -1579,7 +1579,6 @@ def _show_image_in_window(image: np.ndarray, window_name: str) -> None:
 
 @beartype
 def _visualize_color_image(output_img: np.ndarray) -> None:
-    assert output_img.dtype == np.float32 or output_img.dtype == np.float64
     display_img: np.ndarray = (output_img * 255).astype(np.uint8)
     display_img = cv2.cvtColor(display_img, cv2.COLOR_RGB2BGR) # pylint: disable=no-member
     _show_image_in_window(display_img, "Model Output - Color")
