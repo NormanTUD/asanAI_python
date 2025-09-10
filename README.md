@@ -24,10 +24,13 @@
 
 ## Getting Started
 
-1. **Download your model**
-   On [asanAI](https://asanai.scads.ai/), click **"Download model data"** (or *"Modelldaten downloaden"*). Place the downloaded file in the same folder as your generated Python script.
+1. **Create model**
+   On [asanAI](https://asanai.scads.ai/), create and train a model
 
-2. **Run the script**
+2. **Download your model**
+   On [asanAI](https://asanai.scads.ai/), click **Code** and there, **"Download model data"** (or *"Modelldaten downloaden"*). Place the downloaded file in the same folder as your generated Python script.
+
+3. **Run the script**
 
 ```bash
 python3 your_script.py          # Predict using webcam or default behavior
