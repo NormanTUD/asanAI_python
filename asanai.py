@@ -860,7 +860,7 @@ def find_model_zip(base_name: str = "model", extension: str = ".zip") -> Optiona
     if os.path.isfile(direct):
         return direct
 
-    pattern = re.compile(rf"^{re.escape(base_name)}\((\d+)\){re.escape(extension)}$")
+    pattern = re.compile(rf"^{re.escape(base_name)} *\((\d+)\){re.escape(extension)}$")
     numbered_matches: list[tuple[int, str]] = []
 
     for entry in os.listdir("."):
