@@ -35,7 +35,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-15-large]
     permissions:
-      contents: read
+      contents: write
     environment: Production
     runs-on: ubuntu-latest
     steps:
