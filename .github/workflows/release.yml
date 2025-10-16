@@ -7,6 +7,10 @@ on:
   pull_request:
     branches:
       - '**'
+  schedule:
+    # Läuft 1x täglich um 03:00 UTC
+    - cron: '0 3 * * *'
+
 jobs:
   linter:
     strategy:
@@ -18,11 +22,11 @@ jobs:
       contents: write
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Run linter
-      run: |
-        ./tests/linter
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Run linter
+        run: |
+          ./tests/linter
 
   endtoendtest:
     needs: [linter]
@@ -35,23 +39,23 @@ jobs:
     environment: Production
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v3
-      with:
-        python-version: '3.x'
-    - name: Running example script
-      run: |
-        ./tests/run_example_script
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.x'
+      - name: Running example script
+        run: |
+          ./tests/run_example_script
 
-    - name: Create a new version
-      if: ${{ success() }}
-      run: |
-        echo "Creating new version"
-        git tag ${{ github.run_number }} || true
-        git push origin --tags || true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create a new version
+        if: ${{ success() }}
+        run: |
+          echo "Creating new version"
+          git tag ${{ github.run_number }} || true
+          git push origin --tags || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy-to-pypi:
     needs: [endtoendtest]
@@ -59,28 +63,32 @@ jobs:
       contents: read
     environment: Production
     runs-on: ubuntu-latest
+
+    # 🚫 Nur deployen, wenn der Workflow durch einen Push ausgelöst wurde!
+    if: ${{ github.event_name == 'push' }}
+
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v3
-      with:
-        python-version: '3.x'
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        sudo apt-get install -y xterm whiptail python3-dev php-cli unzip curl 2to3 python3-lib2to3 python3-toolz php-mbstring git
-        pip install build
-        pip install setuptools
-    - name: Creating pyproject.toml
-      run: |
-        bash tests/create_pyproject_toml ${{ github.run_number }}
-    - name: Build package
-      run: |
-        python -m build
-        cp -r dist ..
-    - name: Publish package
-      uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
-        packages-dir: dist/
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.x'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          sudo apt-get install -y xterm whiptail python3-dev php-cli unzip curl 2to3 python3-lib2to3 python3-toolz php-mbstring git
+          pip install build
+          pip install setuptools
+      - name: Creating pyproject.toml
+        run: |
+          bash tests/create_pyproject_toml ${{ github.run_number }}
+      - name: Build package
+        run: |
+          python -m build
+          cp -r dist ..
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          packages-dir: dist/
