@@ -47,7 +47,7 @@ def signal_handler(sig: Any, frame: Any) -> None:
 signal.signal(signal.SIGINT, signal_handler)
 
 @beartype
-def dier (msg: Any) -> None:
+def dier(msg: Any) -> None:
     pprint(msg)
     sys.exit(1)
 
@@ -427,10 +427,10 @@ def _is_command_available(cmd: str) -> bool:
 
 @beartype
 def _pip_install_tensorflowjs_converter_and_run_it(conversion_args: list) -> bool:
-    if  not _is_command_available('tensorflowjs_converter'):
+    if not _is_command_available('tensorflowjs_converter'):
         _pip_install("tensorflowjs", True)
 
-    if  _is_command_available('tensorflowjs_converter'):
+    if _is_command_available('tensorflowjs_converter'):
         if _is_command_available('tensorflowjs_converter'):
             with console.status("[bold green]Local tensorflowjs_converter found. Starting conversion..."):
                 cmd = ['tensorflowjs_converter'] + conversion_args
@@ -465,7 +465,7 @@ def _pip_install_tensorflowjs_converter_and_run_it(conversion_args: list) -> boo
 @beartype
 def copy_and_patch_tfjs(model_json_path: str, weights_bin_path: str, out_prefix: str = "tmp_model") -> Tuple[str, str]:
     json_out = f"{out_prefix}.json"
-    bin_out  = f"{out_prefix}.bin"
+    bin_out = f"{out_prefix}.bin"
 
     # --- patch JSON ---
     with open(model_json_path, "r", encoding="utf-8") as f:
