@@ -38,7 +38,6 @@ except ModuleNotFoundError as e:
     print(f"Failed to load module: {e}")
     sys.exit(1)
 
-@beartype
 def signal_handler(sig: Any, frame: Any) -> None:
     print(f"\nKeyboard interrupt received. Exiting program. Got signal {sig}, frame {frame}")
     cv2.destroyAllWindows() # pylint: disable=no-member
@@ -46,14 +45,12 @@ def signal_handler(sig: Any, frame: Any) -> None:
 
 signal.signal(signal.SIGINT, signal_handler)
 
-@beartype
 def dier(msg: Any) -> None:
     pprint(msg)
     sys.exit(1)
 
 console = Console()
 
-@beartype
 def print_predictions_line(predictions: np.ndarray, labels: list[str]) -> None:
     try:
         vals = predictions[0]
@@ -91,7 +88,6 @@ def print_predictions_line(predictions: np.ndarray, labels: list[str]) -> None:
     console.print(text_line, end="")
     sys.stdout.flush()
 
-@beartype
 def _pip_install(package: str, quiet: bool = False) -> bool:
     if not _pip_available():
         console.print("[red]pip is not available – cannot install packages automatically.[/red]")
@@ -128,11 +124,9 @@ def _pip_install(package: str, quiet: bool = False) -> bool:
 
     return False
 
-@beartype
 def rule(msg) -> None:
     console.rule(f"{msg}")
 
-@beartype
 def _in_virtual_env() -> bool:
     return (
         # virtualenv / venv
@@ -142,11 +136,9 @@ def _in_virtual_env() -> bool:
         or bool(os.environ.get("CONDA_PREFIX"))
     )
 
-@beartype
 def _pip_available() -> bool:
     return shutil.which("pip") is not None or util.find_spec("pip") is not None
 
-@beartype
 def _proxy_hint() -> None:
     if not (os.environ.get("HTTP_PROXY") or os.environ.get("HTTPS_PROXY")):
         console.print(
@@ -154,7 +146,6 @@ def _proxy_hint() -> None:
             "firewall, set HTTP_PROXY / HTTPS_PROXY or pass --proxy to pip.[/yellow]"
         )
 
-@beartype
 def _gpu_hint() -> None:
     if shutil.which("nvidia-smi"):
         console.print("[green]CUDA‑capable GPU detected via nvidia‑smi.[/green]")
@@ -169,7 +160,6 @@ def _gpu_hint() -> None:
             "CPU builds will run, but it will be slower than with GPU.[/yellow]"
         )
 
-@beartype
 def _platform_wheel_warning() -> None:
     sys_name = platform.system()
     arch = platform.machine().lower()
@@ -190,7 +180,6 @@ def _platform_wheel_warning() -> None:
             "not supported by official TensorFlow wheels.[/red]"
         )
 
-@beartype
 def download_file(url: str, dest_path: str) -> bool:
     try:
         with urllib.request.urlopen(url) as response:
@@ -214,7 +203,6 @@ def download_file(url: str, dest_path: str) -> bool:
         print(f"Invalid URL: {e}")
         return False
 
-@beartype
 def run_ms_visual_cpp_installer(installer_path: str) -> bool:
     try:
         # subprocess.run waits for the process to finish
@@ -237,11 +225,9 @@ def run_ms_visual_cpp_installer(installer_path: str) -> bool:
         print(f"Subprocess error while running installer: {e}")
         return False
 
-@beartype
 def normalize_input(text: str) -> str:
     return unicodedata.normalize("NFKC", text).strip().lower()
 
-@beartype
 def ask_yes_no(prompt) -> bool:
     if os.environ.get("CI") is not None:
         return True
@@ -257,7 +243,6 @@ def ask_yes_no(prompt) -> bool:
 
         console.print("[red]Please answer with 'yes', 'y' or 'no', 'n'.[/red]")
 
-@beartype
 def download_and_install_ms_visual_cpp() -> None:
     url = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
     filename = "vc_redist.x64.exe"
@@ -281,7 +266,6 @@ def download_and_install_ms_visual_cpp() -> None:
         print("Installation failed.")
         sys.exit(1)
 
-@beartype
 def install_tensorflow(full_argv: Optional[list] = None) -> Optional[ModuleType]:
     console.rule("[bold cyan]Checking for TensorFlow…[/bold cyan]")
 
@@ -349,7 +333,6 @@ def install_tensorflow(full_argv: Optional[list] = None) -> Optional[ModuleType]
 
     return None
 
-@beartype
 def _newest_match(directory: Union[Path, str], pattern: str) -> Optional[Path]:
     directory = Path(directory)
 
@@ -373,7 +356,6 @@ def _newest_match(directory: Union[Path, str], pattern: str) -> Optional[Path]:
     )
     return candidates[0]
 
-@beartype
 def find_model_files(directory: Optional[Union[Path, str]] = ".") -> dict[str, Optional[Path]]:
     if directory is None:
         console.log("[red]No directory provided[/red]")
@@ -421,11 +403,9 @@ def find_model_files(directory: Optional[Union[Path, str]] = ".") -> dict[str, O
 
     return found_files
 
-@beartype
 def _is_command_available(cmd: str) -> bool:
     return shutil.which(cmd) is not None
 
-@beartype
 def _pip_install_tensorflowjs_converter_and_run_it(conversion_args: list) -> bool:
     if not _is_command_available('tensorflowjs_converter'):
         _pip_install("tensorflowjs", True)
@@ -462,7 +442,6 @@ def _pip_install_tensorflowjs_converter_and_run_it(conversion_args: list) -> boo
 
     return False
 
-@beartype
 def copy_and_patch_tfjs(model_json_path: str, weights_bin_path: str, out_prefix: str = "tmp_model") -> Tuple[str, str]:
     json_out = f"{out_prefix}.json"
     bin_out = f"{out_prefix}.bin"
@@ -483,7 +462,6 @@ def copy_and_patch_tfjs(model_json_path: str, weights_bin_path: str, out_prefix:
 
     return json_out, bin_out
 
-@beartype
 def delete_tmp_files(json_file, bin_file) -> None:
     if os.path.exists(json_file):
         with console.status(f"[bold green]Deleting {json_file}..."):
@@ -493,11 +471,9 @@ def delete_tmp_files(json_file, bin_file) -> None:
         with console.status(f"[bold green]Deleting {bin_file}..."):
             os.unlink(bin_file)
 
-@beartype
 def is_docker_installed():
     return shutil.which("docker") is not None
 
-@beartype
 def try_install_docker_linux():
     if shutil.which('apt'):
         console.print("[yellow]🛠 Installing Docker with apt...[/yellow]")
@@ -513,7 +489,6 @@ def try_install_docker_linux():
         console.print("[red]❌ Unsupported Linux package manager.[/red]")
         console.print("👉 Install manually: https://docs.docker.com/engine/install/")
 
-@beartype
 def try_install_docker_windows():
     if not shutil.which('winget'):
         print("❌ Winget not found. Install Docker manually:")
@@ -538,7 +513,6 @@ def try_install_docker_windows():
         print("👉 https://docs.docker.com/docker-for-windows/install/")
         print(f"Details: {e}")
 
-@beartype
 def try_install_docker_mac() -> None:
     try:
         if shutil.which("brew"):
@@ -621,7 +595,6 @@ def try_install_docker_mac() -> None:
     except (OSError, subprocess.SubprocessError) as e:
         console.print(f"[red]❌ Unexpected error: {escape(str(e))}[/red]")
 
-@beartype
 def update_wsl_if_windows() -> None:  # pylint: disable=too-many-branches
     if platform.system() != "Windows":
         return
@@ -640,7 +613,6 @@ def update_wsl_if_windows() -> None:  # pylint: disable=too-many-branches
     else:
         console.print("[yellow]Update cancelled. WSL remains unchanged.[/yellow]")
 
-@beartype
 def check_wsl_installed() -> bool:
     try:
         subprocess.run(["wsl", "--status"], capture_output=True, text=True, check=True)
@@ -654,7 +626,6 @@ def check_wsl_installed() -> bool:
         console.print(f"[red]{e.stderr.strip()}[/red]")
         return False
 
-@beartype
 def install_wsl() -> None:
     try:
         subprocess.run(["wsl", "--install"], capture_output=True, text=True, check=True)
@@ -675,7 +646,6 @@ def install_wsl() -> None:
         console.print("[red]❌ Operating system error during WSL installation.[/red]")
         console.print(f"[red]{str(e)}[/red]")
 
-@beartype
 def check_wsl_update_available() -> bool:
     console.print("[bold cyan]Checking if a WSL update is available...[/bold cyan]")
     try:
@@ -702,7 +672,6 @@ def check_wsl_update_available() -> bool:
 
     return False
 
-@beartype
 def run_wsl_update() -> None:
     try:
         console.print("\n[bold cyan]Running 'wsl --update'...[/bold cyan]")
@@ -725,7 +694,6 @@ def run_wsl_update() -> None:
         console.print("[bold red]❌ OS error occurred while running 'wsl --update':[/bold red]")
         console.print(f"[red]{str(e)}[/red]")
 
-@beartype
 def try_install_docker():
     if is_docker_installed():
         print("✅ Docker is already installed.")
@@ -762,7 +730,6 @@ def try_install_docker():
     print("👉 https://docs.docker.com/get-docker/")
     return False
 
-@beartype
 def check_docker_and_try_to_install(tfjs_model_json: str, weights_bin: str) -> bool:
     if not _is_command_available('docker'):
         if not try_install_docker():
@@ -776,11 +743,9 @@ def check_docker_and_try_to_install(tfjs_model_json: str, weights_bin: str) -> b
 
     return True
 
-@beartype
 def is_windows() -> bool:
     return platform.system().lower() == "windows"
 
-@beartype
 def get_program_files() -> str:
     program_w6432 = os.environ.get("ProgramW6432")
     if program_w6432 is not None:
@@ -792,14 +757,12 @@ def get_program_files() -> str:
 
     raise EnvironmentError("Neither 'ProgramW6432' nor 'ProgramFiles' environment variables are set.")
 
-@beartype
 def is_docker_running() -> bool:
     for proc in psutil.process_iter(['name']):
         if proc.info['name'] and "Docker Desktop.exe" in proc.info['name']:
             return True
     return False
 
-@beartype
 def start_docker() -> int:
     """
     Attempts to start Docker Desktop.exe from the Program Files directory.
@@ -842,7 +805,6 @@ def start_docker() -> int:
         console.print(f"[red]{str(val_error)}[/red]")
         return 4
 
-@beartype
 def start_docker_if_not_running() -> bool:
     if not is_windows():
         return True
@@ -850,7 +812,6 @@ def start_docker_if_not_running() -> bool:
         return False
     return start_docker() == 0
 
-@beartype
 def find_model_zip(base_name: str = "model", extension: str = ".zip") -> Optional[str]:
     """
     Search for a ZIP file named model.zip or model(n).zip in the current directory.
@@ -879,7 +840,6 @@ def find_model_zip(base_name: str = "model", extension: str = ".zip") -> Optiona
     numbered_matches.sort(key=lambda x: x[0])
     return numbered_matches[0][1]
 
-@beartype
 def zip_file_would_overwrite(zip_path: str) -> bool:
     """
     Checks whether extracting the given zip file would overwrite any existing files.
@@ -909,7 +869,6 @@ def zip_file_would_overwrite(zip_path: str) -> bool:
 
     return False
 
-@beartype
 def extract_zip_file(zip_path: str) -> None:
     """
     Extracts the given zip file to the current directory.
@@ -931,7 +890,6 @@ def extract_zip_file(zip_path: str) -> None:
     except OSError as e:
         console.print(f"[bold red]OS error during extraction:[/bold red] {zip_path} - {e}")
 
-@beartype
 def find_and_extract_model_zip_file_if_exists() -> None:
     """
     Finds and conditionally extracts the first valid model.zip or model(n).zip file.
@@ -949,7 +907,6 @@ def find_and_extract_model_zip_file_if_exists() -> None:
 
     extract_zip_file(zip_file)
 
-@beartype
 def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> bool:
     keras_h5_file = 'model.h5'
 
@@ -995,7 +952,6 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
     delete_tmp_files(tfjs_model_json, weights_bin)
     return False
 
-@beartype
 def locate_tfjs_model_files(directory: Optional[Union[str, Path]]) -> tuple[Optional[str], Optional[str]]:
     if directory is None:
         return None, None
@@ -1017,7 +973,6 @@ def locate_tfjs_model_files(directory: Optional[Union[str, Path]]) -> tuple[Opti
 
     return None, None
 
-@beartype
 def run_docker_conversion(conversion_args: list[str]) -> bool:
     start_docker_if_not_running()
 
@@ -1058,7 +1013,6 @@ def run_docker_conversion(conversion_args: list[str]) -> bool:
 
     return False
 
-@beartype
 def write_dockerfile(path: str) -> None:
     dockerfile_content = '''FROM python:3.10-slim
 
@@ -1081,7 +1035,6 @@ CMD ["/bin/bash"]
     with open(path, mode='w', encoding="utf-8") as f:
         f.write(dockerfile_content)
 
-@beartype
 def build_docker_image(image_name: str, dockerfile_path: str, context_path: str) -> bool:
     with Progress(
         SpinnerColumn(),
@@ -1106,7 +1059,6 @@ def build_docker_image(image_name: str, dockerfile_path: str, context_path: str)
             sys.exit(0)
     return False
 
-@beartype
 def load(filename: Union[Path, str], height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> Optional[np.ndarray]:
     rule(f"[bold cyan]Loading and predicting image {filename}[/]")
     try:
@@ -1149,7 +1101,6 @@ def load(filename: Union[Path, str], height: int = 224, width: int = 224, divide
 
     return None
 
-@beartype
 def load_frame(frame: np.ndarray, height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> Optional[np.ndarray]:
     try:
         np_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # pylint: disable=no-member
@@ -1176,7 +1127,6 @@ def load_frame(frame: np.ndarray, height: int = 224, width: int = 224, divide_by
 
     return None
 
-@beartype
 def _format_probabilities(values: np.ndarray) -> list[str]:
     for precision in range(3, 12):  # vernünftiger Bereich
         formatted = [f"{v:.{precision}f}" for v in values]
@@ -1184,7 +1134,6 @@ def _format_probabilities(values: np.ndarray) -> list[str]:
             return formatted
     return [f"{v:.10f}" for v in values]
 
-@beartype
 def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]) -> Optional[np.ndarray]:
     probs = predictions[0]
     best_idx = int(np.argmax(probs))
@@ -1271,7 +1220,6 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
 
     return frame
 
-@beartype
 def get_shape(filename: Union[str, Path]) -> Optional[list[int]]:
     path = Path(filename)
     if not path.exists():
@@ -1312,7 +1260,6 @@ def get_shape(filename: Union[str, Path]) -> Optional[list[int]]:
         console.print(f"[red]I/O error reading file {path}:[/] {e}")
         return None
 
-@beartype
 def _is_float_list(lst) -> bool:
     try:
         any(float(x) for x in lst)
@@ -1320,7 +1267,6 @@ def _is_float_list(lst) -> bool:
     except ValueError:
         return False
 
-@beartype
 def _convert_to_ndarray(values: list[str], expected_shape: Any) -> np.ndarray:
     float_values = list(map(float, values))  # Convert strings to floats
     arr = np.array(float_values).reshape(expected_shape)  # Convert to ndarray and reshape
@@ -1328,12 +1274,10 @@ def _convert_to_ndarray(values: list[str], expected_shape: Any) -> np.ndarray:
 
 # pylint: disable=too-many-branches
 
-@beartype
 def _exit_with_error(message: str) -> None:
     console.print(f"[red]✘ {message}[/red]")
     sys.exit(1)
 
-@beartype
 def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
     input_shape = model.input_shape
     expected_shape = input_shape[1:] if input_shape[0] is None else input_shape
@@ -1393,12 +1337,10 @@ def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
             console.print(f"[red]✘ Error converting input to array: {e}[/red]")
             continue
 
-@beartype
 def show_result(msg) -> None:
     pprint(msg)
 
 
-@beartype
 def model_is_simple_classification(model: Any) -> bool:
     try:
         if not hasattr(model, "layers") or not model.layers:
@@ -1419,7 +1361,6 @@ def model_is_simple_classification(model: Any) -> bool:
         return False
 
 
-@beartype
 def _is_softmax_output_layer(layer: Any) -> bool:
     from tensorflow.keras.layers import Activation  # pylint: disable=import-outside-toplevel, import-error, no-name-in-module
     from tensorflow.keras.layers import Softmax     # pylint: disable=import-outside-toplevel, import-error, no-name-in-module
@@ -1443,7 +1384,6 @@ def _is_softmax_output_layer(layer: Any) -> bool:
     return False
 
 
-@beartype
 def _has_classification_output_shape(model: Any) -> bool:
     if not hasattr(model, "output_shape"):
         return False
@@ -1466,7 +1406,6 @@ def _has_classification_output_shape(model: Any) -> bool:
 
     return True
 
-@beartype
 def output_is_simple_image(model: Any) -> bool:
     try:
         output_shape = model.output_shape
@@ -1501,7 +1440,6 @@ def output_is_simple_image(model: Any) -> bool:
 
     return True
 
-@beartype
 def output_is_complex_image(model: Any) -> bool:
     try:
         output_shape = model.output_shape
@@ -1525,7 +1463,6 @@ def output_is_complex_image(model: Any) -> bool:
         print(f"ValueError in output_is_complex_image unpacking output_shape: {error}")
         return False
 
-@beartype
 def _load_and_prepare_image(img_filepath: Union[Path, str], model: Any) -> Union[np.ndarray, None]:
     img = load(img_filepath)
     if img is None:
@@ -1557,7 +1494,6 @@ def _load_and_prepare_image(img_filepath: Union[Path, str], model: Any) -> Union
 
     return img
 
-@beartype
 def _normalize_and_convert_to_uint8(channel: np.ndarray) -> np.ndarray:
     ch_min = channel.min()
     ch_max = channel.max()
@@ -1567,7 +1503,6 @@ def _normalize_and_convert_to_uint8(channel: np.ndarray) -> np.ndarray:
         norm_channel = np.zeros_like(channel)
     return (norm_channel * 255).astype(np.uint8)
 
-@beartype
 def _show_image_in_window(image: np.ndarray, window_name: str) -> None:
     cv2.imshow(window_name, image)  # pylint: disable=no-member
     while True:
@@ -1578,13 +1513,11 @@ def _show_image_in_window(image: np.ndarray, window_name: str) -> None:
             break
     cv2.destroyAllWindows()  # pylint: disable=no-member
 
-@beartype
 def _visualize_color_image(output_img: np.ndarray) -> None:
     display_img: np.ndarray = (output_img * 255).astype(np.uint8)
     display_img = cv2.cvtColor(display_img, cv2.COLOR_RGB2BGR) # pylint: disable=no-member
     _show_image_in_window(display_img, "Model Output - Color")
 
-@beartype
 def _visualize_grayscale_channels(output_img: np.ndarray) -> None:
     num_channels = output_img.shape[-1]
     gray_imgs = [
@@ -1596,7 +1529,6 @@ def _visualize_grayscale_channels(output_img: np.ndarray) -> None:
     _show_image_in_window(combined_img, window_name)
 
 
-@beartype
 def visualize(model: Any, img_filepath: Union[Path, str]) -> None:
     try:
         img = _load_and_prepare_image(img_filepath, model)
@@ -1625,7 +1557,6 @@ def visualize(model: Any, img_filepath: Union[Path, str]) -> None:
     except cv2.error as error:  # pylint: disable=no-member
         print(f"OpenCV error displaying image in visualize: {error}")
 
-@beartype
 def visualize_webcam(
     model: Any,
     height: int = 224,
@@ -1709,3 +1640,20 @@ def visualize_webcam(
         cap.release()
         cv2.destroyAllWindows()  # pylint: disable=no-member
         sys.exit(1)
+
+def auto_wrap_namespace(namespace: Any) -> Any:
+    excluded_functions = {
+        "auto_wrap_namespace"
+    }
+
+    for name, obj in list(namespace.items()):
+        if (isinstance(obj, types.FunctionType) and name not in excluded_functions):
+            wrapped = obj
+            if enable_beartype:
+                wrapped = beartype(wrapped)
+
+            namespace[name] = wrapped
+
+    return namespace
+
+auto_wrap_namespace(globals())
