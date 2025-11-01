@@ -93,34 +93,35 @@ def _pip_install(package: str, quiet: bool = False) -> bool:
         console.print("[red]pip is not available – cannot install packages automatically.[/red]")
         return False
 
-    cmd = [sys.executable, "-m", "pip", "install", package]
-    if quiet:
-        cmd.append("-q")
+    with console.status(f"Installing {package}", spinner="dots"):
+        cmd = [sys.executable, "-m", "pip", "install", "-q", package]
+        if quiet:
+            cmd.append("-q")
 
-    try:
-        with Progress(
-            SpinnerColumn(),
-            TextColumn(f"[cyan]Installing {package}...[/cyan]"),
-            transient=True,
-            console=console,
-        ) as progress:
-            task = progress.add_task("pip_install", start=False)
-            progress.start_task(task)
-            result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            if result.returncode != 0:
-                console.print(f"[red]Failed to install {package}.[/red]")
-                console.print(f"[red]{result.stderr.strip()}[/red]")
-            return result.returncode == 0
-    except FileNotFoundError:
-        console.print(f"[red]Python executable not found: {sys.executable}[/red]")
-    except subprocess.CalledProcessError as e:
-        console.print(f"[red]Installation failed for {package} (non-zero exit).[/red]")
-        console.print(f"[red]{e.stderr.strip()}[/red]")
-    except subprocess.SubprocessError as e:
-        console.print(f"[red]A subprocess error occurred during installation of {package}.[/red]")
-        console.print(f"[red]{str(e).strip()}[/red]")
-    except KeyboardInterrupt:
-        console.print(f"[yellow]Installation of {package} interrupted by user.[/yellow]")
+        try:
+            with Progress(
+                SpinnerColumn(),
+                TextColumn(f"[cyan]Installing {package}...[/cyan]"),
+                transient=True,
+                console=console,
+            ) as progress:
+                task = progress.add_task("pip_install", start=False)
+                progress.start_task(task)
+                result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                if result.returncode != 0:
+                    console.print(f"[red]Failed to install {package}.[/red]")
+                    console.print(f"[red]{result.stderr.strip()}[/red]")
+                return result.returncode == 0
+        except FileNotFoundError:
+            console.print(f"[red]Python executable not found: {sys.executable}[/red]")
+        except subprocess.CalledProcessError as e:
+            console.print(f"[red]Installation failed for {package} (non-zero exit).[/red]")
+            console.print(f"[red]{e.stderr.strip()}[/red]")
+        except subprocess.SubprocessError as e:
+            console.print(f"[red]A subprocess error occurred during installation of {package}.[/red]")
+            console.print(f"[red]{str(e).strip()}[/red]")
+        except KeyboardInterrupt:
+            console.print(f"[yellow]Installation of {package} interrupted by user.[/yellow]")
 
     return False
 
