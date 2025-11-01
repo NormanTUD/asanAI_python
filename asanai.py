@@ -14,6 +14,7 @@ try:
     from importlib import import_module, util
     import json
     from types import ModuleType
+    import types
     import platform
     import traceback
     import urllib.request
@@ -1649,8 +1650,7 @@ def auto_wrap_namespace(namespace: Any) -> Any:
     for name, obj in list(namespace.items()):
         if (isinstance(obj, types.FunctionType) and name not in excluded_functions):
             wrapped = obj
-            if enable_beartype:
-                wrapped = beartype(wrapped)
+            wrapped = beartype(wrapped)
 
             namespace[name] = wrapped
 
