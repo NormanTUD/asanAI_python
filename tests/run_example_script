@@ -4,6 +4,12 @@ SCRIPT_DIR=$(dirname $(realpath "$0"))
 
 cd "$SCRIPT_DIR/example_script"
 
+echo "Python3-Version: >>>>"
+
+python3 --version
+
+echo "<<<<<<<<<<<<<<<<<<<<<"
+
 python3 example.py slimer.png
 
 exit_code=$?
