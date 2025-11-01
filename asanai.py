@@ -313,7 +313,7 @@ def install_tensorflow(full_argv: Optional[list] = None) -> Optional[ModuleType]
 
     if _pip_install(pkg_name):
         _gpu_hint()
-    elif _pip_install("tf-nightly"):
+    elif _pip_install("tensorflow"):
         console.print("[yellow]Falling back to nightly build.[/yellow]")
         _gpu_hint()
     else:
