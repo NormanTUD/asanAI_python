@@ -1648,6 +1648,7 @@ def auto_wrap_namespace(namespace: Any) -> Any:
 
     for name, obj in list(namespace.items()):
         if (isinstance(obj, FunctionType) and name not in excluded_functions):
+            wrapped = obj
             wrapped = beartype(wrapped)
 
             namespace[name] = wrapped
