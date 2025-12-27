@@ -34,17 +34,23 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-15-large]
+        # Hier definierst du deine Python-Versionen
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        os: [ubuntu-latest] 
+        
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: write
     environment: Production
-    runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v3
-        #with:
-        #  python-version: '3.13'
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5 # Update auf v5 empfohlen
+        with:
+          python-version: ${{ matrix.python-version }}
+
       - name: Running example script
         run: |
           ./tests/run_example_script
