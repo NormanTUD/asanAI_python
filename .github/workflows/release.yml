@@ -36,7 +36,7 @@ jobs:
       matrix:
         # Hier definierst du deine Python-Versionen
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-        os: [ubuntu-latest] 
+        os: [ubuntu-latest, windows-latest, macos-15-large] 
         
     runs-on: ${{ matrix.os }}
     permissions:
