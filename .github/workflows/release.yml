@@ -51,6 +51,11 @@ jobs:
 
   version-tagging:
     needs: [endtoendtest]
+    strategy:
+      fail-fast: true
+    permissions:
+      contents: write
+    environment: Production
     if: ${{ github.event_name == 'push' }}
 
       - name: Create a new version
