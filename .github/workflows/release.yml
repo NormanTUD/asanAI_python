@@ -55,6 +55,7 @@ jobs:
       fail-fast: true
     permissions:
       contents: write
+    runs-on: ubuntu-latest
     environment: Production
     if: ${{ github.event_name == 'push' }}
 
