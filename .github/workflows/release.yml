@@ -43,8 +43,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v3
-        #with:
-        #  python-version: '3.13'
+        with:
+          python-version: '3.13'
       - name: Running example script
         run: |
           ./tests/run_example_script
@@ -60,6 +60,9 @@ jobs:
     if: ${{ github.event_name == 'push' }}
 
     steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v3
       - name: Create a new version
         if: ${{ success() }}
         run: |
