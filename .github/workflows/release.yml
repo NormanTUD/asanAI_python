@@ -49,6 +49,10 @@ jobs:
         run: |
           ./tests/run_example_script
 
+  version-tagging:
+    needs: [endtoendtest]
+    if: ${{ github.event_name == 'push' }}
+
       - name: Create a new version
         if: ${{ success() }}
         run: |
@@ -65,7 +69,6 @@ jobs:
     environment: Production
     runs-on: ubuntu-latest
 
-    # 🚫 Nur deployen, wenn der Workflow durch einen Push ausgelöst wurde!
     if: ${{ github.event_name == 'push' }}
 
     steps:
