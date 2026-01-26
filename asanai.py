@@ -1026,8 +1026,8 @@ RUN python -m pip install --upgrade pip
 RUN python -m pip install \\
     tensorflow==2.12.0 \\
     tensorflowjs==4.7.0 \\
-    jax==0.4.13 \\
-    jaxlib==0.4.13
+    jax \\
+    jaxlib
 
 WORKDIR /app
 
