@@ -1015,8 +1015,6 @@ def run_docker_conversion(conversion_args: list[str]) -> bool:
     return False
 
 def write_dockerfile(path: str) -> None:
-    # Wir nutzen Python 3.11, da es stabiler mit aktuellen TF-Builds ist
-    # und lassen tensorflowjs die passenden JAX-Abhängigkeiten selbst wählen.
     dockerfile_content = '''FROM python:3.11-slim
 
 RUN apt-get update && \\
