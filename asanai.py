@@ -1015,7 +1015,7 @@ def run_docker_conversion(conversion_args: list[str]) -> bool:
     return False
 
 def write_dockerfile(path: str) -> None:
-    dockerfile_content = '''FROM python:3.10-slim
+    dockerfile_content = '''FROM python:3.11-slim
 
 RUN apt-get update && \\
     apt-get install -y --no-install-recommends build-essential curl && \\
@@ -1023,11 +1023,11 @@ RUN apt-get update && \\
 
 RUN python -m pip install --upgrade pip
 
+# Durch das Weglassen der fixen JAX/JAXLIB Versionen löst pip den Konflikt selbst.
+# tensorflowjs installiert automatisch eine kompatible JAX-Version.
 RUN python -m pip install \\
-    tensorflow==2.12.0 \\
-    tensorflowjs==4.7.0 \\
-    jax==0.4.13 \\
-    jaxlib==0.4.13
+    tensorflow==2.15.0 \\
+    tensorflowjs==4.17.0
 
 WORKDIR /app
 
