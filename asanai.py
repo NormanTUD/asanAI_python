@@ -1691,7 +1691,6 @@ def classify_and_display(model: Any, filename: str, labels: list[str], height: i
 
         console.print(table)
 
-
 def classify_webcam(model, labels, height=224, width=224, divide_by=255.0):
     """Live webcam classification with annotation overlay."""
     try:
