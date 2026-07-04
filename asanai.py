@@ -1656,4 +1656,81 @@ def auto_wrap_namespace(namespace: Any) -> Any:
 
     return namespace
 
+def classify_and_display(model: Any, filename: str, labels: list[str], height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> None:
+    """Load an image, run classification, and display results as a Rich table."""
+    from rich.table import Table
+    import rich as rich_module
+
+    image = load(filename, height, width, divide_by)
+
+    if image is None:
+        console.print(f"[bold red]Error:[/] Could not load image: [italic]{filename}[/]")
+        return
+
+    prediction = model.predict(image, verbose=0)
+
+    for prediction_idx in range(len(prediction)):
+        nr_labels = len(prediction[prediction_idx])
+        if len(labels) < nr_labels:
+            console.print(
+                rich_module.panel.Panel.fit(
+                    f"[bold red]Aborted:[/] Model returned [bold]{nr_labels}[/] labels,\n"
+                    f"but only [bold]{len(labels)}[/] labels are defined.",
+                    title="Error",
+                    border_style="red"
+                )
+            )
+            sys.exit(1)
+
+        table = Table(show_lines=True)
+        table.add_column("Label", style="cyan", justify="right")
+        table.add_column("Probability/Output", style="magenta", justify="left")
+
+        for nr_idx in range(nr_labels):
+            table.add_row(labels[nr_idx], f"{prediction[prediction_idx][nr_idx]:.4f}")
+
+        console.print(table)
+
+
+def classify_webcam(model, labels, height=224, width=224, divide_by=255.0):
+    """Live webcam classification with annotation overlay."""
+    try:
+        cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            console.print("[red]Could not open webcam.[/red]")
+            return
+
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                console.print("[red]Could not load frame from webcam. Is the webcam currently in use?[/red]")
+                sys.exit(1)
+
+            image = load_frame(frame, height, width, divide_by)
+
+            if image is not None:
+                predictions = model.predict(image, verbose=0)
+                frame = annotate_frame(frame, predictions, labels)
+                print_predictions_line(predictions, labels)
+
+                if frame is not None:
+                    try:
+                        cv2.imshow('frame', frame)
+                        if cv2.waitKey(1) & 0xFF == ord('q'):
+                            break
+                        if cv2.getWindowProperty("frame", cv2.WND_PROP_VISIBLE) < 1:
+                            print("\nWindow was closed.")
+                            break
+                    except cv2.error:
+                        print("")
+                        sys.exit(1)
+
+        cap.release()
+        cv2.destroyAllWindows()
+    except KeyboardInterrupt:
+        print("You pressed CTRL-c. Program will end.")
+        cap.release()
+        cv2.destroyAllWindows()
+        sys.exit(0)
+
 auto_wrap_namespace(globals())
