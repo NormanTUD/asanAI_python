@@ -1691,7 +1691,7 @@ def classify_and_display(model: Any, filename: str, labels: list[str], height: i
 def classify_webcam(model, labels, height=224, width=224, divide_by=255.0):
     """Live webcam classification with annotation overlay."""
     try:
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(0)  # pylint: disable=no-member
         if not cap.isOpened():
             console.print("[red]Could not open webcam.[/red]")
             return
@@ -1721,12 +1721,12 @@ def classify_webcam(model, labels, height=224, width=224, divide_by=255.0):
                         print("")
                         sys.exit(1)
 
-        cap.release()
-        cv2.destroyAllWindows()
+        cap.release()  # pylint: disable=no-member
+        cv2.destroyAllWindows()  # pylint: disable=no-member
     except KeyboardInterrupt:
         print("You pressed CTRL-c. Program will end.")
-        cap.release()
-        cv2.destroyAllWindows()
+        cap.release()  # pylint: disable=no-member
+        cv2.destroyAllWindows()  # pylint: disable=no-member
         sys.exit(0)
 
 auto_wrap_namespace(globals())
