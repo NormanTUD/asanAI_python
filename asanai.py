@@ -1044,7 +1044,7 @@ def build_docker_image(image_name: str, dockerfile_path: str, context_path: str)
         transient=True,
         console=console
     ) as progress:
-        task = progress.add_task("Building Docker image...", total=None)
+        task = progress.add_task("Building Docker image (this may take a while, but only has to be done once)...", total=None)
         try:
             cmd = ['docker', 'build', '-t', image_name, '-f', dockerfile_path, context_path]
             subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
