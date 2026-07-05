@@ -1711,13 +1711,13 @@ def classify_webcam(model, labels, height=224, width=224, divide_by=255.0):
 
                 if frame is not None:
                     try:
-                        cv2.imshow('frame', frame)
-                        if cv2.waitKey(1) & 0xFF == ord('q'):
+                        cv2.imshow('frame', frame)  # pylint: disable=no-member
+                        if cv2.waitKey(1) & 0xFF == ord('q'):  # pylint: disable=no-member
                             break
-                        if cv2.getWindowProperty("frame", cv2.WND_PROP_VISIBLE) < 1:
+                        if cv2.getWindowProperty("frame", cv2.WND_PROP_VISIBLE) < 1:  # pylint: disable=no-member
                             print("\nWindow was closed.")
                             break
-                    except cv2.error:
+                    except cv2.error:  # pylint: disable=no-member
                         print("")
                         sys.exit(1)
 
