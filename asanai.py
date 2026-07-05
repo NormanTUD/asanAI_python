@@ -1655,7 +1655,7 @@ def auto_wrap_namespace(namespace: Any) -> Any:
 
     return namespace
 
-def classify_and_display(model: Any, filename: str, labels: list[str], height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> None:
+def classify_and_display(model: Any, filename: str, labels: list[str], height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> None:  # pylint: disable=oo-many-arguments
     """Load an image, run classification, and display results as a Rich table."""
 
     image = load(filename, height, width, divide_by)
