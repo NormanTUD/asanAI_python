@@ -35,7 +35,7 @@ try:
     from rich.markup import escape
     from beartype import beartype
 
-    from rich.table import Table
+    from rich.table import Table  # pylint: disable=ungrouped-imports
     import rich as rich_module
 except ModuleNotFoundError as e:
     print(f"Failed to load module: {e}")
@@ -1666,7 +1666,7 @@ def classify_and_display(model: Any, filename: str, labels: list[str], height: i
 
     prediction = model.predict(image, verbose=0)
 
-    for prediction_idx in range(len(prediction)):
+    for prediction_idx in range(len(prediction)):  # pylint: disable=consider-using-enumerate
         nr_labels = len(prediction[prediction_idx])
         if len(labels) < nr_labels:
             console.print(
