@@ -1341,7 +1341,6 @@ def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
 def show_result(msg) -> None:
     pprint(msg)
 
-
 def model_is_simple_classification(model: Any) -> bool:
     try:
         if not hasattr(model, "layers") or not model.layers:
@@ -1360,7 +1359,6 @@ def model_is_simple_classification(model: Any) -> bool:
     except (AttributeError, IndexError, TypeError, ValueError) as error:
         print(f"{type(error).__name__} in model_is_simple_classification: {error}")
         return False
-
 
 def _is_softmax_output_layer(layer: Any) -> bool:
     from tensorflow.keras.layers import Activation  # pylint: disable=import-outside-toplevel, import-error, no-name-in-module
@@ -1383,7 +1381,6 @@ def _is_softmax_output_layer(layer: Any) -> bool:
         return True
 
     return False
-
 
 def _has_classification_output_shape(model: Any) -> bool:
     if not hasattr(model, "output_shape"):
@@ -1528,7 +1525,6 @@ def _visualize_grayscale_channels(output_img: np.ndarray) -> None:
     combined_img = np.hstack(gray_imgs)
     window_name = f"Model Output - {num_channels} grayscale channels"
     _show_image_in_window(combined_img, window_name)
-
 
 def visualize(model: Any, img_filepath: Union[Path, str]) -> None:
     try:
