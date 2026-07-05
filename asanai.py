@@ -34,6 +34,9 @@ try:
     from rich.text import Text
     from rich.markup import escape
     from beartype import beartype
+
+    from rich.table import Table
+    import rich as rich_module
 except ModuleNotFoundError as e:
     print(f"Failed to load module: {e}")
     sys.exit(1)
@@ -1654,8 +1657,6 @@ def auto_wrap_namespace(namespace: Any) -> Any:
 
 def classify_and_display(model: Any, filename: str, labels: list[str], height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> None:
     """Load an image, run classification, and display results as a Rich table."""
-    from rich.table import Table
-    import rich as rich_module
 
     image = load(filename, height, width, divide_by)
 
