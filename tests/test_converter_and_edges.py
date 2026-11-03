@@ -44,6 +44,16 @@ def test_converter_local_failure_falls_back(monkeypatch, quiet_console):
     assert asanai._pip_install_tensorflowjs_converter_and_run_it(["x"]) is False
 
 
+def test_converter_local_timeout(monkeypatch, quiet_console):
+    monkeypatch.setattr(asanai, "_is_command_available", lambda cmd: True)
+
+    def timeout(cmd, **kwargs):
+        raise subprocess.TimeoutExpired(cmd, 1)
+
+    monkeypatch.setattr(asanai.subprocess, "run", timeout)
+    assert asanai._pip_install_tensorflowjs_converter_and_run_it(["x"]) is False
+
+
 def test_converter_keyboard_interrupt(monkeypatch, quiet_console):
     monkeypatch.setattr(asanai, "_is_command_available", lambda cmd: True)
 

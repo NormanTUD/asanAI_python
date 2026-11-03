@@ -67,6 +67,28 @@ def test_rule(quiet_console):
     assert quiet_console.messages
 
 
+def test_configure_logging_is_idempotent():
+    import logging
+
+    added = []
+    original_level = asanai.logger.level
+    try:
+        asanai.configure_logging(logging.INFO)
+        asanai.configure_logging(logging.DEBUG)
+        added = [
+            handler
+            for handler in asanai.logger.handlers
+            if isinstance(handler, logging.StreamHandler)
+            and not isinstance(handler, logging.NullHandler)
+        ]
+        assert len(added) == 1
+        assert asanai.logger.level == logging.DEBUG
+    finally:
+        for handler in added:
+            asanai.logger.removeHandler(handler)
+        asanai.logger.setLevel(original_level)
+
+
 def test_in_virtual_env_true_and_false(monkeypatch):
     monkeypatch.setattr(asanai.sys, "prefix", "/venv")
     monkeypatch.setattr(asanai.sys, "base_prefix", "/usr")
@@ -152,14 +174,14 @@ class _Response:
 
 def test_download_file_success(tmp_path, monkeypatch):
     destination = tmp_path / "file.bin"
-    monkeypatch.setattr(asanai.urllib.request, "urlopen", lambda url: _Response())
+    monkeypatch.setattr(asanai.urllib.request, "urlopen", lambda url, **kwargs: _Response())
     assert asanai.download_file("https://example.invalid/file", str(destination)) is True
     assert destination.read_bytes() == b"data"
 
 
 def test_download_file_bad_status(tmp_path, monkeypatch):
     destination = tmp_path / "file.bin"
-    monkeypatch.setattr(asanai.urllib.request, "urlopen", lambda url: _Response(status=404))
+    monkeypatch.setattr(asanai.urllib.request, "urlopen", lambda url, **kwargs: _Response(status=404))
     assert asanai.download_file("https://example.invalid/file", str(destination)) is False
 
 
@@ -174,7 +196,7 @@ def test_download_file_bad_status(tmp_path, monkeypatch):
 def test_download_file_errors(tmp_path, monkeypatch, error):
     destination = tmp_path / "file.bin"
 
-    def raise_error(url):
+    def raise_error(url, **kwargs):
         raise error
 
     monkeypatch.setattr(asanai.urllib.request, "urlopen", raise_error)

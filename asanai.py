@@ -22,6 +22,7 @@ try:
     import unicodedata
     import signal
     import zipfile
+    import logging
 
     import numpy as np
     import cv2
@@ -53,7 +54,70 @@ def dier(msg: Any) -> None:
     sys.exit(1)
 
 console = Console()
+logger = logging.getLogger("asanai")
+logger.addHandler(logging.NullHandler())
 
+__all__ = [
+    "ask_yes_no",
+    "annotate_frame",
+    "classify_and_display",
+    "classify_webcam",
+    "configure_logging",
+    "console",
+    "convert_to_keras_if_needed",
+    "copy_and_patch_tfjs",
+    "delete_tmp_files",
+    "download_and_install_ms_visual_cpp",
+    "download_file",
+    "find_model_files",
+    "get_shape",
+    "install_tensorflow",
+    "load",
+    "load_frame",
+    "load_or_input_model_data",
+    "locate_tfjs_model_files",
+    "logger",
+    "model_is_simple_classification",
+    "normalize_input",
+    "output_is_complex_image",
+    "output_is_simple_image",
+    "print_predictions_line",
+    "run_ms_visual_cpp_installer",
+    "show_result",
+    "visualize",
+    "visualize_webcam",
+]
+
+@beartype
+def configure_logging(level: Union[int, str] = logging.INFO) -> None:
+    """Attach a stderr handler unless the caller already configured one."""
+    has_stream_handler = any(
+        isinstance(handler, logging.StreamHandler)
+        and not isinstance(handler, logging.NullHandler)
+        for handler in logger.handlers
+    )
+    if not has_stream_handler:
+        handler = logging.StreamHandler()
+        handler.setFormatter(
+            logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+        )
+        logger.addHandler(handler)
+    logger.setLevel(level)
+
+NETWORK_TIMEOUT = 60
+COMMAND_TIMEOUT = 600
+LONG_COMMAND_TIMEOUT = 1800
+
+def _run_command(cmd: list[str], timeout: int = COMMAND_TIMEOUT, **kwargs: Any):
+    """Run a subprocess with a bounded runtime and log the command."""
+    logger.debug("Running command with timeout=%ss: %s", timeout, cmd)
+    try:
+        return subprocess.run(cmd, timeout=timeout, **kwargs)
+    except subprocess.TimeoutExpired:
+        logger.warning("Command timed out after %ss: %s", timeout, cmd)
+        raise
+
+@beartype
 def print_predictions_line(predictions: np.ndarray, labels: list[str]) -> None:
     try:
         vals = predictions[0]
@@ -110,7 +174,7 @@ def _pip_install(package: str, quiet: bool = False) -> bool:
             ) as progress:
                 task = progress.add_task("pip_install", start=False)
                 progress.start_task(task)
-                result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                result = _run_command(cmd, timeout=LONG_COMMAND_TIMEOUT, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 if result.returncode != 0:
                     console.print(f"[red]Failed to install {package}.[/red]")
                     console.print(f"[red]{result.stderr.strip()}[/red]")
@@ -184,9 +248,10 @@ def _platform_wheel_warning() -> None:
             "not supported by official TensorFlow wheels.[/red]"
         )
 
+@beartype
 def download_file(url: str, dest_path: str) -> bool:
     try:
-        with urllib.request.urlopen(url) as response:
+        with urllib.request.urlopen(url, timeout=NETWORK_TIMEOUT) as response:
             status = getattr(response, "status", 200)
             if status != 200:
                 print(f"Error: Server responded with status {status}")
@@ -194,6 +259,7 @@ def download_file(url: str, dest_path: str) -> bool:
             data = response.read()
             with open(dest_path, 'wb') as file:
                 file.write(data)
+        logger.info("File successfully downloaded: %s -> %s", url, dest_path)
         print(f"File successfully downloaded: {dest_path}")
         return True
     except urllib.error.HTTPError as e:
@@ -212,10 +278,11 @@ def download_file(url: str, dest_path: str) -> bool:
         print(f"File system error while downloading: {e}")
         return False
 
+@beartype
 def run_ms_visual_cpp_installer(installer_path: str) -> bool:
     try:
         # subprocess.run waits for the process to finish
-        result = subprocess.run([installer_path, '/install', '/quiet', '/norestart'], check=False)
+        result = _run_command([installer_path, '/install', '/quiet', '/norestart'], check=False)
         if result.returncode == 0:
             print("Installation completed successfully.")
             return True
@@ -238,9 +305,11 @@ def run_ms_visual_cpp_installer(installer_path: str) -> bool:
         print(f"Operating system error while running installer: {e}")
         return False
 
+@beartype
 def normalize_input(text: str) -> str:
     return unicodedata.normalize("NFKC", text).strip().lower()
 
+@beartype
 def ask_yes_no(prompt) -> bool:
     if os.environ.get("CI") is not None:
         return True
@@ -260,6 +329,7 @@ def ask_yes_no(prompt) -> bool:
 
         console.print("[red]Please answer with 'yes', 'y' or 'no', 'n'.[/red]")
 
+@beartype
 def download_and_install_ms_visual_cpp() -> None:
     url = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
     filename = "vc_redist.x64.exe"
@@ -283,12 +353,14 @@ def download_and_install_ms_visual_cpp() -> None:
         print("Installation failed.")
         sys.exit(1)
 
+@beartype
 def install_tensorflow(full_argv: Optional[list] = None) -> Optional[ModuleType]:
     console.rule("[bold cyan]Checking for TensorFlow…[/bold cyan]")
 
     with console.status("Fast-probing TensorFlow Module. Will load and return it if it exists."):
         if util.find_spec("tensorflow"):
             tf = import_module("tensorflow")  # full import only when needed
+            logger.debug("TensorFlow is already available")
             _gpu_hint()
             return tf
 
@@ -384,6 +456,7 @@ def _newest_match(directory: Union[Path, str], pattern: str) -> Optional[Path]:
     )
     return candidates[0]
 
+@beartype
 def find_model_files(directory: Optional[Union[Path, str]] = ".") -> dict[str, Optional[Path]]:
     if directory is None:
         console.log("[red]No directory provided[/red]")
@@ -443,8 +516,9 @@ def _pip_install_tensorflowjs_converter_and_run_it(conversion_args: list) -> boo
             with console.status("[bold green]Local tensorflowjs_converter found. Starting conversion..."):
                 cmd = ['tensorflowjs_converter'] + conversion_args
                 try:
-                    completed_process = subprocess.run(
+                    completed_process = _run_command(
                         cmd,
+                        timeout=LONG_COMMAND_TIMEOUT,
                         check=True,
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
@@ -456,6 +530,9 @@ def _pip_install_tensorflowjs_converter_and_run_it(conversion_args: list) -> boo
                 except subprocess.CalledProcessError as e:
                     console.print("[red]✘ Local conversion failed:[/]")
                     console.print(Text(e.stderr.strip(), style="bold red"))
+                    console.print("[yellow]➜ Falling back to Docker-based conversion...[/]")
+                except subprocess.TimeoutExpired:
+                    console.print("[red]✘ Local conversion timed out.[/]")
                     console.print("[yellow]➜ Falling back to Docker-based conversion...[/]")
                 except OSError as e:
                     console.print(f"[red]✘ Could not run local conversion:[/] {e}")
@@ -473,6 +550,7 @@ def _pip_install_tensorflowjs_converter_and_run_it(conversion_args: list) -> boo
 
     return False
 
+@beartype
 def copy_and_patch_tfjs(model_json_path: str, weights_bin_path: str, out_prefix: str = "tmp_model") -> Tuple[str, str]:
     json_out = f"{out_prefix}.json"
     bin_out = f"{out_prefix}.bin"
@@ -500,6 +578,7 @@ def copy_and_patch_tfjs(model_json_path: str, weights_bin_path: str, out_prefix:
 
     return json_out, bin_out
 
+@beartype
 def delete_tmp_files(json_file, bin_file) -> None:
     for path in (json_file, bin_file):
         if not path:
@@ -520,14 +599,14 @@ def try_install_docker_linux():
     try:
         if shutil.which('apt'):
             console.print("[yellow]🛠 Installing Docker with apt...[/yellow]")
-            subprocess.run(['sudo', 'apt', 'update'], check=True)
-            subprocess.run(['sudo', 'apt', 'install', '-y', 'docker.io'], check=True)
+            _run_command(['sudo', 'apt', 'update'], check=True)
+            _run_command(['sudo', 'apt', 'install', '-y', 'docker.io'], check=True)
         elif shutil.which('dnf'):
             console.print("[yellow]🛠 Installing Docker with dnf...[/yellow]")
-            subprocess.run(['sudo', 'dnf', 'install', '-y', 'docker'], check=True)
+            _run_command(['sudo', 'dnf', 'install', '-y', 'docker'], check=True)
         elif shutil.which('pacman'):
             console.print("[yellow]🛠 Installing Docker with pacman...[/yellow]")
-            subprocess.run(['sudo', 'pacman', '-Sy', '--noconfirm', 'docker'], check=True)
+            _run_command(['sudo', 'pacman', '-Sy', '--noconfirm', 'docker'], check=True)
         else:
             console.print("[red]❌ Unsupported Linux package manager.[/red]")
             console.print("👉 Install manually: https://docs.docker.com/engine/install/")
@@ -543,7 +622,7 @@ def try_install_docker_windows():
 
     print("🛠 Installing Docker Desktop using winget...")
     try:
-        subprocess.run([
+        _run_command([
             'winget', 'install', '--id', 'Docker.DockerDesktop',
             '--source', 'winget',
             '--accept-package-agreements',
@@ -558,6 +637,10 @@ def try_install_docker_windows():
         print("❌ Docker installation failed. Manual install:")
         print("👉 https://docs.docker.com/docker-for-windows/install/")
         print(f"Details: {e}")
+    except subprocess.TimeoutExpired as e:
+        print("❌ Docker installation timed out. Manual install:")
+        print("👉 https://docs.docker.com/docker-for-windows/install/")
+        print(f"Details: {e}")
 
 def try_install_docker_mac() -> None:
     try:
@@ -567,7 +650,7 @@ def try_install_docker_mac() -> None:
             env = os.environ.copy()
             env["NONINTERACTIVE"] = "1"
 
-            result = subprocess.run(
+            result = _run_command(
                 ['brew', 'install', '--cask', 'docker'],
                 check=False,
                 capture_output=True,
@@ -593,7 +676,7 @@ def try_install_docker_mac() -> None:
 
                     console.print(f"[yellow]Download script from {script_https_url}[/yellow]")
 
-                    curl_result = subprocess.run(
+                    curl_result = _run_command(
                         ['curl', '-fsSL', script_https_url, '-o', script_path],
                         check=False, capture_output=True, text=True)
 
@@ -610,7 +693,7 @@ def try_install_docker_mac() -> None:
                     env = os.environ.copy()
                     env["NONINTERACTIVE"] = "1"
 
-                    install_result = subprocess.run(
+                    install_result = _run_command(
                         [script_path],
                         shell=False,
                         check=False,
@@ -661,7 +744,7 @@ def update_wsl_if_windows() -> None:  # pylint: disable=too-many-branches
 
 def check_wsl_installed() -> bool:
     try:
-        subprocess.run(["wsl", "--status"], capture_output=True, text=True, check=True)
+        _run_command(["wsl", "--status"], capture_output=True, text=True, check=True)
         console.print("[green]WSL is installed.[/green]")
         return True
     except FileNotFoundError:
@@ -671,10 +754,13 @@ def check_wsl_installed() -> bool:
         console.print("[red]❌ Error while checking WSL status:[/red]")
         console.print(f"[red]{e.stderr.strip()}[/red]")
         return False
+    except subprocess.TimeoutExpired:
+        console.print("[red]❌ Checking WSL status timed out.[/red]")
+        return False
 
 def install_wsl() -> None:
     try:
-        subprocess.run(["wsl", "--install"], capture_output=True, text=True, check=True)
+        _run_command(["wsl", "--install"], capture_output=True, text=True, check=True)
         console.print("[bold green]✅ WSL installation initiated successfully.[/bold green]")
         console.print("[cyan]You may need to reboot your system to complete the installation.[/cyan]")
     except FileNotFoundError as e:
@@ -688,6 +774,8 @@ def install_wsl() -> None:
         console.print(f"[red]Exit code: {e.returncode}[/red]")
         console.print(f"[red]Command: {' '.join(e.cmd)}[/red]")
         console.print(f"[red]Error Output: {e.stderr.strip() if e.stderr else 'No error output available.'}[/red]")
+    except subprocess.TimeoutExpired:
+        console.print("[red]❌ WSL installation timed out.[/red]")
     except OSError as e:
         console.print("[red]❌ Operating system error during WSL installation.[/red]")
         console.print(f"[red]{str(e)}[/red]")
@@ -695,7 +783,7 @@ def install_wsl() -> None:
 def check_wsl_update_available() -> bool:
     console.print("[bold cyan]Checking if a WSL update is available...[/bold cyan]")
     try:
-        check_update = subprocess.run(["wsl", "--update", "--status"], capture_output=True, text=True, check=True)
+        check_update = _run_command(["wsl", "--update", "--status"], capture_output=True, text=True, check=True)
         if "The installed version is the same as the latest version" in check_update.stdout:
             console.print("[green]✅ WSL is already up to date.[/green]")
             return False
@@ -712,6 +800,8 @@ def check_wsl_update_available() -> bool:
         console.print(f"[red]Exit code: {e.returncode}[/red]")
         console.print(f"[red]Command: {' '.join(e.cmd)}[/red]")
         console.print(f"[red]Error Output: {e.stderr.strip() if e.stderr else 'No error output available.'}[/red]")
+    except subprocess.TimeoutExpired:
+        console.print("[red]❌ Checking WSL update status timed out.[/red]")
     except OSError as e:
         console.print("[red]❌ Operating system error occurred while checking for WSL updates.[/red]")
         console.print(f"[red]{str(e)}[/red]")
@@ -721,7 +811,7 @@ def check_wsl_update_available() -> bool:
 def run_wsl_update() -> None:
     try:
         console.print("\n[bold cyan]Running 'wsl --update'...[/bold cyan]")
-        update = subprocess.run(["wsl", "--update"], capture_output=True, text=True, check=True)
+        update = _run_command(["wsl", "--update"], capture_output=True, text=True, check=True)
         if update.returncode == 0:
             console.print("[bold green]✅ WSL was successfully updated.[/bold green]")
         else:
@@ -904,6 +994,17 @@ def find_model_zip(base_name: str = "model", extension: str = ".zip") -> Optiona
     numbered_matches.sort(key=lambda x: x[0])
     return numbered_matches[0][1]
 
+def _safe_zip_target(name: str) -> Optional[str]:
+    """Return the absolute target path, or None if it escapes the cwd."""
+    root = os.path.abspath(".")
+    target = os.path.abspath(os.path.join(root, name))
+    try:
+        if os.path.commonpath([root, target]) != root:
+            return None
+    except ValueError:
+        return None
+    return target
+
 def zip_file_would_overwrite(zip_path: str) -> bool:
     """
     Checks whether extracting the given zip file would overwrite any existing files.
@@ -912,7 +1013,11 @@ def zip_file_would_overwrite(zip_path: str) -> bool:
     try:
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             for name in zip_ref.namelist():
-                if os.path.exists(name):
+                target = _safe_zip_target(name)
+                if target is None:
+                    console.print(f"[bold red]Refusing unsafe ZIP member:[/bold red] {name}")
+                    return True
+                if os.path.exists(target):
                     console.print(f"[bold yellow]File already exists and would be overwritten: {name}[/bold yellow]")
                     return True
     except zipfile.BadZipFile:
@@ -939,7 +1044,11 @@ def extract_zip_file(zip_path: str) -> None:
     """
     try:
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(".")
+            for name in zip_ref.namelist():
+                if _safe_zip_target(name) is None:
+                    console.print(f"[bold red]Skipping unsafe ZIP member:[/bold red] {name}")
+                    continue
+                zip_ref.extract(name, ".")
         console.print(f"[green]Successfully extracted:[/green] {zip_path}")
     except zipfile.BadZipFile:
         console.print(f"[bold red]Invalid ZIP file:[/bold red] {zip_path}")
@@ -971,11 +1080,13 @@ def find_and_extract_model_zip_file_if_exists() -> None:
 
     extract_zip_file(zip_file)
 
+@beartype
 def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> bool:
     keras_h5_file = 'model.h5'
 
     if os.path.exists(keras_h5_file):
         console.print(f"[green]✔ Conversion not needed:[/] '{keras_h5_file}' already exists.")
+        logger.info("Keras model already present: %s", keras_h5_file)
         return True
 
     rule("[bold cyan]Trying to convert downloaded model files[/]")
@@ -1016,6 +1127,7 @@ def convert_to_keras_if_needed(directory: Optional[Union[Path, str]] = ".") -> b
     delete_tmp_files(tfjs_model_json, weights_bin)
     return False
 
+@beartype
 def locate_tfjs_model_files(directory: Optional[Union[str, Path]]) -> tuple[Optional[str], Optional[str]]:
     if directory is None:
         return None, None
@@ -1041,9 +1153,12 @@ def run_docker_conversion(conversion_args: list[str]) -> bool:
     start_docker_if_not_running()
 
     try:
-        subprocess.run(['docker', 'info'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        _run_command(['docker', 'info'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except subprocess.CalledProcessError:
         console.print("[red]✘ Docker daemon not running or inaccessible. Cannot perform fallback conversion.[/]")
+        return False
+    except subprocess.TimeoutExpired:
+        console.print("[red]✘ Docker daemon check timed out. Cannot perform fallback conversion.[/]")
         return False
     except OSError as e:
         console.print(f"[red]✘ Docker is not available:[/] {e}")
@@ -1071,13 +1186,16 @@ def run_docker_conversion(conversion_args: list[str]) -> bool:
 
         with console.status("[bold green]Running conversion inside Docker container..."):
             try:
-                run_process = subprocess.run(run_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                run_process = _run_command(run_cmd, timeout=LONG_COMMAND_TIMEOUT, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 console.print("[green]✔ Conversion inside Docker container succeeded.[/]")
                 console.print(Text(run_process.stdout.strip(), style="dim"))
+                logger.info("Docker conversion succeeded")
                 return True
             except subprocess.CalledProcessError as e:
                 console.print("[red]✘ Conversion inside Docker container failed with error:[/]")
                 console.print(Text(e.stderr.strip(), style="bold red"))
+            except subprocess.TimeoutExpired:
+                console.print("[red]✘ Conversion inside Docker container timed out.[/]")
             except KeyboardInterrupt:
                 console.print("[red]✘ Docker run was cancelled by CTRL-C[/]")
                 sys.exit(0)
@@ -1117,13 +1235,16 @@ def build_docker_image(image_name: str, dockerfile_path: str, context_path: str)
         task = progress.add_task("Building Docker image (this may take a while, but only has to be done once)...", total=None)
         try:
             cmd = ['docker', 'build', '-t', image_name, '-f', dockerfile_path, context_path]
-            subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            _run_command(cmd, timeout=LONG_COMMAND_TIMEOUT, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             progress.update(task, description="Docker image built successfully.")
             return True
         except subprocess.CalledProcessError as e:
             progress.stop()
             console.print("[red]✘ Docker build failed with error:[/]")
             console.print(Text(e.stderr.strip(), style="bold red"))
+        except subprocess.TimeoutExpired:
+            progress.stop()
+            console.print("[red]✘ Docker build timed out.[/]")
         except OSError as e:
             progress.stop()
             console.print(f"[red]✘ Could not run Docker build:[/] {e}")
@@ -1133,6 +1254,7 @@ def build_docker_image(image_name: str, dockerfile_path: str, context_path: str)
             sys.exit(0)
     return False
 
+@beartype
 def load(filename: Union[Path, str], height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> Optional[np.ndarray]:
     rule(f"[bold cyan]Loading and predicting image {filename}[/]")
     try:
@@ -1179,6 +1301,7 @@ def load(filename: Union[Path, str], height: int = 224, width: int = 224, divide
 
     return None
 
+@beartype
 def load_frame(frame: np.ndarray, height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> Optional[np.ndarray]:
     try:
         if divide_by == 0:
@@ -1305,6 +1428,7 @@ def _draw_predictions_with_cv2(
         )
     return frame
 
+@beartype
 def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]) -> Optional[np.ndarray]:
     validated = _validated_predictions(predictions)
     if validated is None:
@@ -1327,6 +1451,7 @@ def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]
         return _draw_predictions_with_cv2(frame, labels, best_idx, formatted_probs)
 
 
+@beartype
 def get_shape(filename: Union[str, Path]) -> Optional[list[int]]:
     path = Path(filename)
     if not path.exists():
@@ -1399,6 +1524,7 @@ def _get_expected_shape_and_size(model: Any) -> Tuple[Any, int]:
 
     return expected_shape, expected_size
 
+@beartype
 def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
     expected_shape, expected_size = _get_expected_shape_and_size(model)
 
@@ -1456,9 +1582,11 @@ def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
             console.print(f"[red]✘ Error converting input to array: {e}[/red]")
             continue
 
+@beartype
 def show_result(msg) -> None:
     pprint(msg)
 
+@beartype
 def model_is_simple_classification(model: Any) -> bool:
     try:
         if not hasattr(model, "layers") or not model.layers:
@@ -1522,6 +1650,7 @@ def _has_classification_output_shape(model: Any) -> bool:
 
     return True
 
+@beartype
 def output_is_simple_image(model: Any) -> bool:
     try:
         output_shape = model.output_shape
@@ -1556,6 +1685,7 @@ def output_is_simple_image(model: Any) -> bool:
 
     return True
 
+@beartype
 def output_is_complex_image(model: Any) -> bool:
     try:
         output_shape = model.output_shape
@@ -1648,6 +1778,7 @@ def _visualize_grayscale_channels(output_img: np.ndarray) -> None:
     window_name = f"Model Output - {num_channels} grayscale channels"
     _show_image_in_window(combined_img, window_name)
 
+@beartype
 def visualize(model: Any, img_filepath: Union[Path, str]) -> None:
     try:
         img = _load_and_prepare_image(img_filepath, model)
@@ -1683,6 +1814,7 @@ def _release_capture(cap: Any) -> None:
     except (cv2.error, OSError, AttributeError):  # pylint: disable=no-member
         pass
 
+@beartype
 def visualize_webcam(
     model: Any,
     height: int = 224,
@@ -1781,6 +1913,7 @@ def auto_wrap_namespace(namespace: Any) -> Any:
 
     return namespace
 
+@beartype
 def classify_and_display(model: Any, filename: str, labels: list[str], height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> None:  # pylint: disable=too-many-arguments,too-many-positional-arguments
     """Load an image, run classification, and display results as a Rich table."""
 
@@ -1818,6 +1951,7 @@ def classify_and_display(model: Any, filename: str, labels: list[str], height: i
 
         console.print(table)
 
+@beartype
 def classify_webcam(model, labels, height=224, width=224, divide_by=255.0):
     """Live webcam classification with annotation overlay."""
     cap = None
@@ -1867,5 +2001,3 @@ def classify_webcam(model, labels, height=224, width=224, divide_by=255.0):
         _release_capture(cap)
         cv2.destroyAllWindows()  # pylint: disable=no-member
         sys.exit(1)
-
-auto_wrap_namespace(globals())

@@ -71,6 +71,17 @@ def test_try_install_docker_windows_failure(monkeypatch, capsys):
     assert "Docker installation failed" in capsys.readouterr().out
 
 
+def test_try_install_docker_windows_timeout(monkeypatch, capsys):
+    monkeypatch.setattr(asanai.shutil, "which", lambda name: "/winget")
+
+    def timeout(cmd, **kwargs):
+        raise subprocess.TimeoutExpired(cmd, 1)
+
+    monkeypatch.setattr(asanai.subprocess, "run", timeout)
+    asanai.try_install_docker_windows()
+    assert "timed out" in capsys.readouterr().out
+
+
 @pytest.mark.parametrize("returncode", [0, 1])
 def test_try_install_docker_mac_brew(monkeypatch, quiet_console, returncode):
     monkeypatch.setattr(asanai.shutil, "which", lambda name: "/opt/homebrew/bin/brew")
@@ -235,12 +246,21 @@ def test_check_wsl_installed(monkeypatch, quiet_console):
     assert asanai.check_wsl_installed() is False
 
 
+def test_check_wsl_installed_timeout(monkeypatch, quiet_console):
+    def timeout(*args, **kwargs):
+        raise subprocess.TimeoutExpired("wsl", 1)
+
+    monkeypatch.setattr(asanai.subprocess, "run", timeout)
+    assert asanai.check_wsl_installed() is False
+
+
 @pytest.mark.parametrize(
     "error",
     [
         FileNotFoundError("wsl"),
         PermissionError("denied"),
         subprocess.CalledProcessError(1, "wsl", stderr="err"),
+        subprocess.TimeoutExpired("wsl", 1),
         OSError("os"),
     ],
 )
@@ -285,6 +305,7 @@ def test_check_wsl_update_available(monkeypatch, quiet_console):
         FileNotFoundError("wsl"),
         PermissionError("denied"),
         subprocess.CalledProcessError(1, "wsl", stderr="err"),
+        subprocess.TimeoutExpired("wsl", 1),
         OSError("os"),
     ],
 )

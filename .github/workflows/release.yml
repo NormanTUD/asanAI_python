@@ -56,6 +56,7 @@ jobs:
         shell: bash
         run: |
           python -m pytest \
+            -m "not integration" \
             --cov=asanai \
             --cov-report=term-missing \
             --cov-report=markdown:coverage.md \
@@ -84,28 +85,29 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-  endtoendtest:
+  integration:
     needs: [linter]
-    strategy:
-      fail-fast: true
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-15-large]
     permissions:
-      contents: write
-    environment: Production
+      contents: read
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
-      - name: Running example script
+          python-version: '3.11'
+      - name: Install TensorFlow and tensorflowjs
         run: |
-          ./tests/run_example_script
+          python -m pip install --upgrade pip
+          python -m pip install -r tests/requirements.txt
+          python -m pip install "tensorflow==2.16.1" "tensorflowjs==4.22.0" "setuptools<81"
+      - name: Run real model conversion test
+        run: |
+          python -m pytest -q -m integration
 
   version-tagging:
-    needs: [endtoendtest, python-tests]
+    needs: [integration, python-tests]
     strategy:
       fail-fast: true
     permissions:
@@ -125,7 +127,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy-to-pypi:
-    needs: [endtoendtest, python-tests]
+    needs: [integration, python-tests]
     permissions:
       contents: read
     environment: Production

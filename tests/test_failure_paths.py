@@ -36,7 +36,7 @@ def test_download_file_without_status_attribute(tmp_path, monkeypatch):
     monkeypatch.setattr(
         asanai.urllib.request,
         "urlopen",
-        lambda url: _Response(include_status=False),
+        lambda url, **kwargs: _Response(include_status=False),
     )
     assert asanai.download_file("https://example.invalid", str(destination)) is True
     assert destination.read_bytes() == b"data"
@@ -44,7 +44,7 @@ def test_download_file_without_status_attribute(tmp_path, monkeypatch):
 
 def test_download_file_disk_error(tmp_path, monkeypatch):
     destination = tmp_path / "file.bin"
-    monkeypatch.setattr(asanai.urllib.request, "urlopen", lambda url: _Response())
+    monkeypatch.setattr(asanai.urllib.request, "urlopen", lambda url, **kwargs: _Response())
     monkeypatch.setattr(
         builtins, "open", lambda *args, **kwargs: (_ for _ in ()).throw(OSError("disk full"))
     )
@@ -166,9 +166,29 @@ def test_extract_zip_file_does_not_escape_working_directory(tmp_path):
     archive = tmp_path / "model.zip"
     with zipfile.ZipFile(archive, "w") as zip_ref:
         zip_ref.writestr("../escaped.txt", "data")
+        zip_ref.writestr("safe.txt", "safe")
     asanai.extract_zip_file(str(archive))
     assert not (tmp_path.parent / "escaped.txt").exists()
-    assert (tmp_path / "escaped.txt").read_text(encoding="utf-8") == "data"
+    assert not (tmp_path / "escaped.txt").exists()
+    assert (tmp_path / "safe.txt").read_text(encoding="utf-8") == "safe"
+
+
+def test_zip_file_would_overwrite_unsafe_member(tmp_path, quiet_console):
+    import zipfile
+
+    archive = tmp_path / "model.zip"
+    with zipfile.ZipFile(archive, "w") as zip_ref:
+        zip_ref.writestr("../escaped.txt", "data")
+    assert asanai.zip_file_would_overwrite(str(archive)) is True
+
+
+def test_safe_zip_target_handles_commonpath_value_error(monkeypatch):
+    monkeypatch.setattr(
+        asanai.os.path,
+        "commonpath",
+        lambda paths: (_ for _ in ()).throw(ValueError("different drives")),
+    )
+    assert asanai._safe_zip_target("safe.txt") is None
 
 
 def test_zip_file_would_overwrite_corrupt_archive(tmp_path, quiet_console):

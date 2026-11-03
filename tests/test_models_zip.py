@@ -273,6 +273,16 @@ def test_run_docker_conversion_daemon_not_running(monkeypatch, quiet_console):
     assert asanai.run_docker_conversion(["a"]) is False
 
 
+def test_run_docker_conversion_daemon_timeout(monkeypatch, quiet_console):
+    monkeypatch.setattr(asanai, "start_docker_if_not_running", lambda: False)
+
+    def timeout(cmd, **kwargs):
+        raise subprocess.TimeoutExpired(cmd, 1)
+
+    monkeypatch.setattr(asanai.subprocess, "run", timeout)
+    assert asanai.run_docker_conversion(["a"]) is False
+
+
 def test_run_docker_conversion_build_failure(monkeypatch, quiet_console):
     calls = []
 
@@ -306,6 +316,18 @@ def test_run_docker_conversion_failure(monkeypatch, quiet_console):
         if cmd[:2] == ["docker", "info"]:
             return subprocess.CompletedProcess(cmd, 0)
         raise subprocess.CalledProcessError(1, cmd, stderr="failed")
+
+    monkeypatch.setattr(asanai.subprocess, "run", run)
+    monkeypatch.setattr(asanai, "write_dockerfile", lambda path: None)
+    monkeypatch.setattr(asanai, "build_docker_image", lambda *args: True)
+    assert asanai.run_docker_conversion(["a"]) is False
+
+
+def test_run_docker_conversion_container_timeout(monkeypatch, quiet_console):
+    def run(cmd, **kwargs):
+        if cmd[:2] == ["docker", "info"]:
+            return subprocess.CompletedProcess(cmd, 0)
+        raise subprocess.TimeoutExpired(cmd, 1)
 
     monkeypatch.setattr(asanai.subprocess, "run", run)
     monkeypatch.setattr(asanai, "write_dockerfile", lambda path: None)
@@ -347,6 +369,14 @@ def test_build_docker_image_failure(monkeypatch, quiet_console, fake_progress):
         raise subprocess.CalledProcessError(1, "docker", stderr="failed")
 
     monkeypatch.setattr(asanai.subprocess, "run", fail)
+    assert asanai.build_docker_image("image", "Dockerfile", ".") is False
+
+
+def test_build_docker_image_timeout(monkeypatch, quiet_console, fake_progress):
+    def timeout(*args, **kwargs):
+        raise subprocess.TimeoutExpired("docker", 1)
+
+    monkeypatch.setattr(asanai.subprocess, "run", timeout)
     assert asanai.build_docker_image("image", "Dockerfile", ".") is False
 
 
