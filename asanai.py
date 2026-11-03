@@ -1243,7 +1243,7 @@ def _draw_predictions_with_font(
     font_size = 20
     outline_width = 2
 
-    image_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    image_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))  # pylint: disable=no-member
     draw = ImageDraw.Draw(image_pil)
     font = ImageFont.truetype(font_path, font_size)
 

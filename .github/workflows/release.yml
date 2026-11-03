@@ -35,7 +35,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.13']
+        python-version: ['3.10', '3.12', '3.14', '3.x']
     permissions:
       contents: read
     runs-on: ${{ matrix.os }}
@@ -53,8 +53,36 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt -r tests/requirements.txt
       - name: Run unit tests with coverage
+        shell: bash
         run: |
-          python -m pytest --cov=asanai --cov-report=term-missing --cov-fail-under=95
+          python -m pytest \
+            --cov=asanai \
+            --cov-report=term-missing \
+            --cov-report=markdown:coverage.md \
+            --cov-report=json:coverage.json \
+            --cov-fail-under=95 | tee coverage-term.txt
+      - name: Publish coverage summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Coverage — ${{ matrix.os }} / Python ${{ matrix.python-version }}"
+            echo
+            echo "### pytest output"
+            echo '```'
+            cat coverage-term.txt 2>/dev/null || true
+            echo '```'
+            if [ -f coverage.md ]; then
+              echo
+              echo "### Coverage table"
+              cat coverage.md
+            fi
+            if [ -f coverage.json ]; then
+              echo
+              echo "### Uncovered lines per file"
+              python tests/coverage_summary.py coverage.json
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
   endtoendtest:
     needs: [linter]
