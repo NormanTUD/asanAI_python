@@ -1,2 +1,15 @@
+# Test runner
 pytest>=8.0
 pytest-cov>=5.0
+
+# Runtime modules imported by asanai.py itself. These are listed explicitly
+# instead of pulling in the full requirements.txt so unit tests do not need
+# keras/h5py (which can lag behind the newest Python release and force a
+# source build that requires a system HDF5 installation).
+beartype
+numpy
+opencv-python
+scikit-image
+rich
+psutil
+pillow
