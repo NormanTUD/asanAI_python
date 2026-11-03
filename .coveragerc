@@ -1,0 +1,16 @@
+[run]
+source = asanai
+branch = False
+omit =
+    setup.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+    raise AssertionError
+    raise NotImplementedError
+show_missing = True
+skip_covered = False
+precision = 2
+fail_under = 95

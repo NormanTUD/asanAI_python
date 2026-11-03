@@ -36,7 +36,7 @@ try:
     from beartype import beartype
 
     from rich.table import Table  # pylint: disable=ungrouped-imports
-    import rich as rich_module
+    from rich.panel import Panel  # pylint: disable=ungrouped-imports
 except ModuleNotFoundError as e:
     print(f"Failed to load module: {e}")
     sys.exit(1)
@@ -1670,7 +1670,7 @@ def classify_and_display(model: Any, filename: str, labels: list[str], height: i
         nr_labels = len(prediction[prediction_idx])
         if len(labels) < nr_labels:
             console.print(
-                rich_module.panel.Panel.fit(
+                Panel.fit(
                     f"[bold red]Aborted:[/] Model returned [bold]{nr_labels}[/] labels,\n"
                     f"but only [bold]{len(labels)}[/] labels are defined.",
                     title="Error",
