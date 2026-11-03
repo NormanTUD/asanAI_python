@@ -111,8 +111,9 @@ LONG_COMMAND_TIMEOUT = 1800
 def _run_command(cmd: list[str], timeout: int = COMMAND_TIMEOUT, **kwargs: Any):
     """Run a subprocess with a bounded runtime and log the command."""
     logger.debug("Running command with timeout=%ss: %s", timeout, cmd)
+    check = kwargs.pop("check", False)
     try:
-        return subprocess.run(cmd, timeout=timeout, **kwargs)
+        return subprocess.run(cmd, timeout=timeout, check=check, **kwargs)
     except subprocess.TimeoutExpired:
         logger.warning("Command timed out after %ss: %s", timeout, cmd)
         raise
