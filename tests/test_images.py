@@ -159,7 +159,7 @@ def test_annotate_frame_label_mismatch(quiet_console):
             np.array([[0.2, 0.8]]),
             ["only-one"],
         )
-    assert exc.value.code == 0
+    assert exc.value.code == 1
 
 
 def test_get_shape(tmp_path, quiet_console):

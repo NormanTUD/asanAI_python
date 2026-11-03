@@ -481,12 +481,11 @@ def test_start_docker_errors(monkeypatch, quiet_console, error):
     assert asanai.start_docker() == 4
 
 
-def test_start_docker_get_program_files_raises(monkeypatch):
+def test_start_docker_get_program_files_raises(monkeypatch, quiet_console):
     monkeypatch.setattr(
         asanai, "get_program_files", lambda: (_ for _ in ()).throw(EnvironmentError("no"))
     )
-    with pytest.raises(EnvironmentError):
-        asanai.start_docker()
+    assert asanai.start_docker() == 2
 
 
 def test_start_docker_if_not_running(monkeypatch):

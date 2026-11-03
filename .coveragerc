@@ -1,6 +1,6 @@
 [run]
 source = asanai
-branch = False
+branch = True
 omit =
     setup.py
 

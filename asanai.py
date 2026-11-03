@@ -187,8 +187,9 @@ def _platform_wheel_warning() -> None:
 def download_file(url: str, dest_path: str) -> bool:
     try:
         with urllib.request.urlopen(url) as response:
-            if response.status != 200:
-                print(f"Error: Server responded with status {response.status}")
+            status = getattr(response, "status", 200)
+            if status != 200:
+                print(f"Error: Server responded with status {status}")
                 return False
             data = response.read()
             with open(dest_path, 'wb') as file:
@@ -205,6 +206,10 @@ def download_file(url: str, dest_path: str) -> bool:
 
     except ValueError as e:
         print(f"Invalid URL: {e}")
+        return False
+
+    except OSError as e:
+        print(f"File system error while downloading: {e}")
         return False
 
 def run_ms_visual_cpp_installer(installer_path: str) -> bool:
@@ -229,6 +234,10 @@ def run_ms_visual_cpp_installer(installer_path: str) -> bool:
         print(f"Subprocess error while running installer: {e}")
         return False
 
+    except OSError as e:
+        print(f"Operating system error while running installer: {e}")
+        return False
+
 def normalize_input(text: str) -> str:
     return unicodedata.normalize("NFKC", text).strip().lower()
 
@@ -237,7 +246,11 @@ def ask_yes_no(prompt) -> bool:
         return True
 
     while True:
-        answer = normalize_input(Prompt.ask(prompt, default="no")).strip().lower()
+        try:
+            answer = normalize_input(Prompt.ask(prompt, default="no")).strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            console.print("\n[yellow]No answer received. Assuming 'no'.[/yellow]")
+            return False
 
         if answer in ['yes', 'y', 'j']:
             return True
@@ -330,7 +343,12 @@ def install_tensorflow(full_argv: Optional[list] = None) -> Optional[ModuleType]
     console.print("[green]TensorFlow installed successfully! Trying to restart the script automatically...[/green]")
 
     if full_argv is not None and isinstance(full_argv, list):
-        os.execv(sys.executable, [sys.executable] + full_argv)
+        try:
+            os.execv(sys.executable, [sys.executable] + full_argv)
+        except OSError as e:
+            console.print(f"[yellow]Could not restart automatically:[/yellow] {e}")
+            console.print("You need to manually restart your script after TensorFlow was installed.")
+            sys.exit(0)
     else:
         console.print("You need to manually restart your script after TensorFlow was installed.")
         sys.exit(0)
@@ -340,8 +358,14 @@ def install_tensorflow(full_argv: Optional[list] = None) -> Optional[ModuleType]
 def _newest_match(directory: Union[Path, str], pattern: str) -> Optional[Path]:
     directory = Path(directory)
 
+    try:
+        entries = list(directory.iterdir())
+    except OSError as e:
+        console.log(f"[yellow]Cannot read directory {directory}:[/yellow] {e}")
+        return None
+
     candidates = [
-        p for p in directory.iterdir()
+        p for p in entries
         if re.fullmatch(pattern, p.name)
     ]
 
@@ -433,6 +457,9 @@ def _pip_install_tensorflowjs_converter_and_run_it(conversion_args: list) -> boo
                     console.print("[red]✘ Local conversion failed:[/]")
                     console.print(Text(e.stderr.strip(), style="bold red"))
                     console.print("[yellow]➜ Falling back to Docker-based conversion...[/]")
+                except OSError as e:
+                    console.print(f"[red]✘ Could not run local conversion:[/] {e}")
+                    console.print("[yellow]➜ Falling back to Docker-based conversion...[/]")
                 except KeyboardInterrupt:
                     console.print("[green]You cancelled the conversion progress by CTRL-C. You need to run this script again or do it manually for this program to work.[/green]")
                     sys.exit(0)
@@ -450,47 +477,62 @@ def copy_and_patch_tfjs(model_json_path: str, weights_bin_path: str, out_prefix:
     json_out = f"{out_prefix}.json"
     bin_out = f"{out_prefix}.bin"
 
-    # --- patch JSON ---
-    with open(model_json_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    try:
+        # --- patch JSON ---
+        with open(model_json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
 
-    # Point every manifest entry to the newly created .bin
-    for manifest in data.get("weightsManifest", []):
-        manifest["paths"] = [f"./{Path(bin_out).name}"]
+        if not isinstance(data, dict):
+            raise ValueError("Model JSON root is not an object")
 
-    with open(json_out, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+        # Point every manifest entry to the newly created .bin
+        for manifest in data.get("weightsManifest", []):
+            manifest["paths"] = [f"./{Path(bin_out).name}"]
 
-    # --- copy BIN ---
-    shutil.copyfile(weights_bin_path, bin_out)
+        with open(json_out, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+        # --- copy BIN ---
+        shutil.copyfile(weights_bin_path, bin_out)
+    except (OSError, ValueError, TypeError) as e:
+        console.print(f"[red]Could not prepare TensorFlow.js model files:[/red] {e}")
+        return "", ""
 
     return json_out, bin_out
 
 def delete_tmp_files(json_file, bin_file) -> None:
-    if os.path.exists(json_file):
-        with console.status(f"[bold green]Deleting {json_file}..."):
-            os.unlink(json_file)
+    for path in (json_file, bin_file):
+        if not path:
+            continue
 
-    if os.path.exists(bin_file):
-        with console.status(f"[bold green]Deleting {bin_file}..."):
-            os.unlink(bin_file)
+        try:
+            if not os.path.exists(path):
+                continue
+            with console.status(f"[bold green]Deleting {path}..."):
+                os.unlink(path)
+        except OSError as e:
+            console.print(f"[yellow]Could not delete temporary file {path}:[/yellow] {e}")
 
 def is_docker_installed():
     return shutil.which("docker") is not None
 
 def try_install_docker_linux():
-    if shutil.which('apt'):
-        console.print("[yellow]🛠 Installing Docker with apt...[/yellow]")
-        subprocess.run(['sudo', 'apt', 'update'], check=True)
-        subprocess.run(['sudo', 'apt', 'install', '-y', 'docker.io'], check=True)
-    elif shutil.which('dnf'):
-        console.print("[yellow]🛠 Installing Docker with dnf...[/yellow]")
-        subprocess.run(['sudo', 'dnf', 'install', '-y', 'docker'], check=True)
-    elif shutil.which('pacman'):
-        console.print("[yellow]🛠 Installing Docker with pacman...[/yellow]")
-        subprocess.run(['sudo', 'pacman', '-Sy', '--noconfirm', 'docker'], check=True)
-    else:
-        console.print("[red]❌ Unsupported Linux package manager.[/red]")
+    try:
+        if shutil.which('apt'):
+            console.print("[yellow]🛠 Installing Docker with apt...[/yellow]")
+            subprocess.run(['sudo', 'apt', 'update'], check=True)
+            subprocess.run(['sudo', 'apt', 'install', '-y', 'docker.io'], check=True)
+        elif shutil.which('dnf'):
+            console.print("[yellow]🛠 Installing Docker with dnf...[/yellow]")
+            subprocess.run(['sudo', 'dnf', 'install', '-y', 'docker'], check=True)
+        elif shutil.which('pacman'):
+            console.print("[yellow]🛠 Installing Docker with pacman...[/yellow]")
+            subprocess.run(['sudo', 'pacman', '-Sy', '--noconfirm', 'docker'], check=True)
+        else:
+            console.print("[red]❌ Unsupported Linux package manager.[/red]")
+            console.print("👉 Install manually: https://docs.docker.com/engine/install/")
+    except (subprocess.SubprocessError, OSError) as e:
+        console.print(f"[red]❌ Automatic Docker installation failed:[/red] {e}")
         console.print("👉 Install manually: https://docs.docker.com/engine/install/")
 
 def try_install_docker_windows():
@@ -762,9 +804,16 @@ def get_program_files() -> str:
     raise EnvironmentError("Neither 'ProgramW6432' nor 'ProgramFiles' environment variables are set.")
 
 def is_docker_running() -> bool:
-    for proc in psutil.process_iter(['name']):
-        if proc.info['name'] and "Docker Desktop.exe" in proc.info['name']:
-            return True
+    try:
+        for proc in psutil.process_iter(['name']):
+            try:
+                name = proc.info.get('name')
+            except (psutil.Error, AttributeError, KeyError):
+                continue
+            if name and "Docker Desktop.exe" in name:
+                return True
+    except (psutil.Error, OSError):
+        return False
     return False
 
 def start_docker() -> int:
@@ -776,7 +825,12 @@ def start_docker() -> int:
         3 - Docker Desktop.exe not found
         4 - Other errors (permission, OS, file not found, value error)
     """
-    pf = get_program_files()
+    try:
+        pf = get_program_files()
+    except EnvironmentError as e:
+        console.print(f"[bold red]❌ Program Files directory not found:[/bold red] {e}")
+        return 2
+
     if not pf:
         console.print("[bold red]❌ Program Files directory not found.[/bold red]")
         return 2
@@ -828,7 +882,13 @@ def find_model_zip(base_name: str = "model", extension: str = ".zip") -> Optiona
     pattern = re.compile(rf"^{re.escape(base_name)} *\((\d+)\){re.escape(extension)}$")
     numbered_matches: list[tuple[int, str]] = []
 
-    for entry in os.listdir("."):
+    try:
+        entries = os.listdir(".")
+    except OSError as e:
+        console.print(f"[yellow]Could not list current directory:[/yellow] {e}")
+        return None
+
+    for entry in entries:
         match = pattern.match(entry)
         if match and os.path.isfile(entry):
             try:
@@ -985,12 +1045,19 @@ def run_docker_conversion(conversion_args: list[str]) -> bool:
     except subprocess.CalledProcessError:
         console.print("[red]✘ Docker daemon not running or inaccessible. Cannot perform fallback conversion.[/]")
         return False
+    except OSError as e:
+        console.print(f"[red]✘ Docker is not available:[/] {e}")
+        return False
 
     with tempfile.TemporaryDirectory() as tmpdir:
         dockerfile_path = os.path.join(tmpdir, 'Dockerfile')
         image_name = 'tfjs_converter_py310_dynamic'
 
-        write_dockerfile(dockerfile_path)
+        try:
+            write_dockerfile(dockerfile_path)
+        except OSError as e:
+            console.print(f"[red]✘ Could not write Dockerfile:[/] {e}")
+            return False
 
         if not build_docker_image(image_name, dockerfile_path, tmpdir):
             return False
@@ -1057,6 +1124,9 @@ def build_docker_image(image_name: str, dockerfile_path: str, context_path: str)
             progress.stop()
             console.print("[red]✘ Docker build failed with error:[/]")
             console.print(Text(e.stderr.strip(), style="bold red"))
+        except OSError as e:
+            progress.stop()
+            console.print(f"[red]✘ Could not run Docker build:[/] {e}")
         except KeyboardInterrupt:
             progress.stop()
             console.print("[red]✘ Docker build was cancelled by CTRL-C[/]")
@@ -1066,6 +1136,10 @@ def build_docker_image(image_name: str, dockerfile_path: str, context_path: str)
 def load(filename: Union[Path, str], height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> Optional[np.ndarray]:
     rule(f"[bold cyan]Loading and predicting image {filename}[/]")
     try:
+        if divide_by == 0:
+            console.print("[red]Error: 'divide_by' must not be zero.[/red]")
+            return None
+
         if not os.path.exists(filename):
             console.print(f"[red]Error: The path '{filename}' could not be found![/red]")
             return None
@@ -1107,6 +1181,10 @@ def load(filename: Union[Path, str], height: int = 224, width: int = 224, divide
 
 def load_frame(frame: np.ndarray, height: int = 224, width: int = 224, divide_by: Union[int, float] = 255.0) -> Optional[np.ndarray]:
     try:
+        if divide_by == 0:
+            console.print("[red]'divide_by' must not be zero.[/red]")
+            return None
+
         np_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # pylint: disable=no-member
         np_image = np.array(np_image).astype('float32') / divide_by
         np_image = transform.resize(np_image, (height, width, 3))
@@ -1138,91 +1216,116 @@ def _format_probabilities(values: np.ndarray) -> list[str]:
             return formatted
     return [f"{v:.10f}" for v in values]
 
+def _validated_predictions(predictions: np.ndarray) -> Optional[Tuple[np.ndarray, int]]:
+    try:
+        probs = predictions[0]
+        return probs, int(np.argmax(probs))
+    except (IndexError, TypeError, ValueError, OverflowError) as e:
+        rprint(f"[bold red]❌ Invalid predictions:[/bold red] {e}")
+        return None
+
+def _draw_predictions_with_font(
+    frame: np.ndarray,
+    labels: list[str],
+    probs: np.ndarray,
+    best_idx: int,
+    formatted_probs: list[str],
+) -> np.ndarray:
+    font_path_candidates = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "C:/Windows/Fonts/arial.ttf",
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+    ]
+    font_path = next((fp for fp in font_path_candidates if os.path.exists(fp)), None)
+    if font_path is None:
+        raise FileNotFoundError("No valid Font found (Arial/DejaVuSans).")
+
+    font_size = 20
+    outline_width = 2
+
+    image_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    draw = ImageDraw.Draw(image_pil)
+    font = ImageFont.truetype(font_path, font_size)
+
+    bar_start_x = 300
+    bar_width = 200
+    bar_height = 20
+    line_height = 30
+
+    for i, label in enumerate(labels):
+        text_y = 10 + line_height * i
+        bar_y = text_y  # exakt gleiche y-Position für Text und Balken
+
+        text = f"{label}: {formatted_probs[i]}"
+        fill_color = (0, 255, 0) if i == best_idx else (255, 0, 0)
+        outline_color = (0, 0, 0)
+
+        for dx in range(-outline_width, outline_width + 1):
+            for dy in range(-outline_width, outline_width + 1):
+                if dx == 0 and dy == 0:
+                    continue
+                draw.text((10 + dx, text_y + dy), text, font=font, fill=outline_color)
+
+        draw.text((10, text_y), text, font=font, fill=fill_color)
+
+        bar_fill_len = int(bar_width * probs[i])
+        draw.rectangle(
+            [bar_start_x, bar_y, bar_start_x + bar_width, bar_y + bar_height],
+            fill=(50, 50, 50),
+            outline=(255, 255, 255),
+        )
+        draw.rectangle(
+            [bar_start_x, bar_y, bar_start_x + bar_fill_len, bar_y + bar_height],
+            fill=fill_color
+        )
+
+    # Overlay-Text für Top-1 (kein graues Rechteck mehr)
+    overlay_text = f"Top-1: {labels[best_idx]} ({formatted_probs[best_idx]})"
+    draw.text((10, 10 + line_height * len(labels) + 10), overlay_text, font=font, fill=(255, 255, 255))
+
+    return cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR) # pylint: disable=no-member
+
+def _draw_predictions_with_cv2(
+    frame: np.ndarray,
+    labels: list[str],
+    best_idx: int,
+    formatted_probs: list[str],
+) -> np.ndarray:
+    for i, label in enumerate(labels):
+        text = f"{label}: {formatted_probs[i]}"
+        colour = (0, 255, 0) if i == best_idx else (255, 0, 0)
+        cv2.putText( # pylint: disable=no-member
+            frame,
+            text,
+            (10, 30 * (i + 1)),
+            cv2.FONT_HERSHEY_SIMPLEX, # pylint: disable=no-member
+            0.8,
+            colour,
+            2,
+        )
+    return frame
+
 def annotate_frame(frame: np.ndarray, predictions: np.ndarray, labels: list[str]) -> Optional[np.ndarray]:
-    probs = predictions[0]
-    best_idx = int(np.argmax(probs))
+    validated = _validated_predictions(predictions)
+    if validated is None:
+        return None
+
+    probs, best_idx = validated
 
     if len(labels) != len(probs):
         rprint(f"[bold red]❌ Label count ({len(labels)}) does not match number of prediction probabilities ({len(probs)}).[/bold red]")
         rprint("[yellow]Make sure the number of labels in your script is correct.[/yellow]")
-        sys.exit(0)
+        sys.exit(1)
 
     formatted_probs = [f"{p * 100:.1f}%" for p in probs]
 
     try:
-        font_path_candidates = [
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-            "C:/Windows/Fonts/arial.ttf",
-            "/System/Library/Fonts/Supplemental/Arial.ttf",
-        ]
-        font_path = next((fp for fp in font_path_candidates if os.path.exists(fp)), None)
-        if font_path is None:
-            raise FileNotFoundError("No valid Font found (Arial/DejaVuSans).")
-
-        font_size = 20
-        outline_width = 2
-
-        image_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-        draw = ImageDraw.Draw(image_pil)
-        font = ImageFont.truetype(font_path, font_size)
-
-        bar_start_x = 300
-        bar_width = 200
-        bar_height = 20
-        line_height = 30
-
-        for i, label in enumerate(labels):
-            text_y = 10 + line_height * i
-            bar_y = text_y  # exakt gleiche y-Position für Text und Balken
-
-            text = f"{label}: {formatted_probs[i]}"
-            fill_color = (0, 255, 0) if i == best_idx else (255, 0, 0)
-            outline_color = (0, 0, 0)
-
-            for dx in range(-outline_width, outline_width + 1):
-                for dy in range(-outline_width, outline_width + 1):
-                    if dx == 0 and dy == 0:
-                        continue
-                    draw.text((10 + dx, text_y + dy), text, font=font, fill=outline_color)
-
-            draw.text((10, text_y), text, font=font, fill=fill_color)
-
-            bar_fill_len = int(bar_width * probs[i])
-            draw.rectangle(
-                [bar_start_x, bar_y, bar_start_x + bar_width, bar_y + bar_height],
-                fill=(50, 50, 50),
-                outline=(255, 255, 255),
-            )
-            draw.rectangle(
-                [bar_start_x, bar_y, bar_start_x + bar_fill_len, bar_y + bar_height],
-                fill=fill_color
-            )
-
-        # Overlay-Text für Top-1 (kein graues Rechteck mehr)
-        overlay_text = f"Top-1: {labels[best_idx]} ({formatted_probs[best_idx]})"
-        draw.text((10, 10 + line_height * len(labels) + 10), overlay_text, font=font, fill=(255, 255, 255))
-
-        frame = cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR) # pylint: disable=no-member
-
+        return _draw_predictions_with_font(frame, labels, probs, best_idx, formatted_probs)
     except (OSError, FileNotFoundError, ValueError, AttributeError, TypeError) as specific_err:
         print("Error while drawing with Truetype-Font:", specific_err)
         traceback.print_exc()
+        return _draw_predictions_with_cv2(frame, labels, best_idx, formatted_probs)
 
-        for i, label in enumerate(labels):
-            text = f"{label}: {formatted_probs[i]}"
-            colour = (0, 255, 0) if i == best_idx else (255, 0, 0)
-            cv2.putText( # pylint: disable=no-member
-
-                frame,
-                text,
-                (10, 30 * (i + 1)),
-                cv2.FONT_HERSHEY_SIMPLEX, # pylint: disable=no-member
-                0.8,
-                colour,
-                2,
-            )
-
-    return frame
 
 def get_shape(filename: Union[str, Path]) -> Optional[list[int]]:
     path = Path(filename)
@@ -1266,9 +1369,10 @@ def get_shape(filename: Union[str, Path]) -> Optional[list[int]]:
 
 def _is_float_list(lst) -> bool:
     try:
-        any(float(x) for x in lst)
+        for value in lst:
+            float(value)
         return True
-    except ValueError:
+    except (ValueError, TypeError):
         return False
 
 def _convert_to_ndarray(values: list[str], expected_shape: Any) -> np.ndarray:
@@ -1282,10 +1386,21 @@ def _exit_with_error(message: str) -> None:
     console.print(f"[red]✘ {message}[/red]")
     sys.exit(1)
 
+def _get_expected_shape_and_size(model: Any) -> Tuple[Any, int]:
+    try:
+        input_shape = model.input_shape
+        expected_shape = input_shape[1:] if input_shape[0] is None else input_shape
+        expected_size = int(np.prod(expected_shape))
+    except (AttributeError, IndexError, TypeError, ValueError) as e:
+        _exit_with_error(f"Model does not expose a usable input shape: {e}")
+
+    if expected_size <= 0:
+        _exit_with_error(f"Model input shape {expected_shape} is empty or invalid.")
+
+    return expected_shape, expected_size
+
 def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
-    input_shape = model.input_shape
-    expected_shape = input_shape[1:] if input_shape[0] is None else input_shape
-    expected_size = int(np.prod(expected_shape))
+    expected_shape, expected_size = _get_expected_shape_and_size(model)
 
     # Try to load data from file
     if os.path.isfile(filename):
@@ -1321,8 +1436,8 @@ def load_or_input_model_data(model: Any, filename: str) -> np.ndarray:
         console.print(f"Please enter [bold]{expected_size}[/bold] float values separated by spaces:")
         try:
             user_input = input().strip()
-        except KeyboardInterrupt:
-            console.print("[yellow]✘ Input cancelled with CTRL+C[/yellow]")
+        except (KeyboardInterrupt, EOFError):
+            console.print("[yellow]✘ Input cancelled[/yellow]")
             sys.exit(1)
 
         values = user_input.split()
@@ -1475,9 +1590,13 @@ def _load_and_prepare_image(img_filepath: Union[Path, str], model: Any) -> Union
         print(f"Unexpected image shape after squeeze: {img.shape}")
         return None
 
-    input_shape = model.input_shape
-    if len(input_shape) != 4:
-        print(f"Unexpected model input shape: {input_shape}")
+    try:
+        input_shape = model.input_shape
+        if len(input_shape) != 4:
+            print(f"Unexpected model input shape: {input_shape}")
+            return None
+    except (AttributeError, TypeError) as error:
+        print(f"Cannot read model input shape: {error}")
         return None
 
     _, expected_height, expected_width, expected_channels = input_shape
@@ -1554,8 +1673,15 @@ def visualize(model: Any, img_filepath: Union[Path, str]) -> None:
         else:
             print(f"Unknown output shape {output_shape}, cannot display as image.")
 
-    except cv2.error as error:  # pylint: disable=no-member
-        print(f"OpenCV error displaying image in visualize: {error}")
+    except (cv2.error, AttributeError, ValueError, TypeError, RuntimeError) as error:  # pylint: disable=no-member
+        print(f"Error displaying image in visualize: {error}")
+
+def _release_capture(cap: Any) -> None:
+    try:
+        if cap is not None:
+            cap.release()
+    except (cv2.error, OSError, AttributeError):  # pylint: disable=no-member
+        pass
 
 def visualize_webcam(
     model: Any,
@@ -1563,6 +1689,7 @@ def visualize_webcam(
     width: int = 224,
     divide_by: Union[int, float] = 255.0,
 ) -> None:
+    cap = None
     try:
         cap = cv2.VideoCapture(0) # pylint: disable=no-member
         if not cap.isOpened():
@@ -1575,6 +1702,8 @@ def visualize_webcam(
             ret, frame = cap.read()
             if not ret:
                 console.print("[red]Could not load frame from webcam. Is the webcam currently in use?[/red]")
+                cap.release()
+                cv2.destroyAllWindows() # pylint: disable=no-member
                 sys.exit(1)
 
             # Preprocess frame for model input
@@ -1631,13 +1760,13 @@ def visualize_webcam(
 
     except KeyboardInterrupt:
         console.print("\n[red]You pressed CTRL-C. Program will exit.[/red]")
-        cap.release()
+        _release_capture(cap)
         cv2.destroyAllWindows() # pylint: disable=no-member
         sys.exit(0)
 
-    except (cv2.error, AttributeError, ValueError, TypeError, RuntimeError) as e: # pylint: disable=no-member
+    except (cv2.error, AttributeError, ValueError, TypeError, RuntimeError, OSError) as e: # pylint: disable=no-member
         console.print(f"[red]Error in visualize_webcam: {e}[/red]")
-        cap.release()
+        _release_capture(cap)
         cv2.destroyAllWindows()  # pylint: disable=no-member
         sys.exit(1)
 
@@ -1664,7 +1793,11 @@ def classify_and_display(model: Any, filename: str, labels: list[str], height: i
         console.print(f"[bold red]Error:[/] Could not load image: [italic]{filename}[/]")
         return
 
-    prediction = model.predict(image, verbose=0)
+    try:
+        prediction = model.predict(image, verbose=0)
+    except (AttributeError, ValueError, TypeError, RuntimeError) as error:
+        console.print(f"[bold red]Prediction failed:[/] {error}")
+        return
 
     for prediction_idx in range(len(prediction)):  # pylint: disable=consider-using-enumerate
         nr_labels = len(prediction[prediction_idx])
@@ -1690,6 +1823,7 @@ def classify_and_display(model: Any, filename: str, labels: list[str], height: i
 
 def classify_webcam(model, labels, height=224, width=224, divide_by=255.0):
     """Live webcam classification with annotation overlay."""
+    cap = None
     try:
         cap = cv2.VideoCapture(0)  # pylint: disable=no-member
         if not cap.isOpened():
@@ -1700,6 +1834,8 @@ def classify_webcam(model, labels, height=224, width=224, divide_by=255.0):
             ret, frame = cap.read()
             if not ret:
                 console.print("[red]Could not load frame from webcam. Is the webcam currently in use?[/red]")
+                cap.release()  # pylint: disable=no-member
+                cv2.destroyAllWindows()  # pylint: disable=no-member
                 sys.exit(1)
 
             image = load_frame(frame, height, width, divide_by)
@@ -1725,8 +1861,14 @@ def classify_webcam(model, labels, height=224, width=224, divide_by=255.0):
         cv2.destroyAllWindows()  # pylint: disable=no-member
     except KeyboardInterrupt:
         print("You pressed CTRL-c. Program will end.")
-        cap.release()  # pylint: disable=no-member
+        _release_capture(cap)
         cv2.destroyAllWindows()  # pylint: disable=no-member
         sys.exit(0)
+
+    except (cv2.error, AttributeError, ValueError, TypeError, RuntimeError, OSError) as e:  # pylint: disable=no-member
+        console.print(f"[red]Error in classify_webcam: {e}[/red]")
+        _release_capture(cap)
+        cv2.destroyAllWindows()  # pylint: disable=no-member
+        sys.exit(1)
 
 auto_wrap_namespace(globals())
