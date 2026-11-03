@@ -369,6 +369,24 @@ def test_classify_webcam_success(monkeypatch, quiet_console):
     assert capture.released
 
 
+def test_classify_webcam_loop_continues(monkeypatch, quiet_console):
+    frame = np.zeros((8, 8, 3), dtype=np.uint8)
+    capture = _Capture([(True, frame), (True, frame)])
+    _patch_capture(monkeypatch, capture)
+    monkeypatch.setattr(asanai, "load_frame", lambda *args: np.zeros((1, 4, 4, 3)))
+    monkeypatch.setattr(asanai, "annotate_frame", lambda *args: frame)
+    monkeypatch.setattr(asanai, "print_predictions_line", lambda *args: None)
+    monkeypatch.setattr(asanai.cv2, "imshow", lambda *args: None)
+    keys = iter([-1, ord("q")])
+    monkeypatch.setattr(asanai.cv2, "waitKey", lambda delay: next(keys))
+    monkeypatch.setattr(asanai.cv2, "getWindowProperty", lambda *args: 1)
+    monkeypatch.setattr(asanai.cv2, "destroyAllWindows", lambda: None)
+
+    model = SimpleNamespace(predict=lambda image, verbose=0: np.array([[0.5, 0.5]]))
+    asanai.classify_webcam(model, ["a", "b"])
+    assert capture.released
+
+
 def test_classify_webcam_window_closed(monkeypatch, quiet_console):
     frame = np.zeros((8, 8, 3), dtype=np.uint8)
     capture = _Capture([(True, frame)])

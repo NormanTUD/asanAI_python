@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import builtins
+import runpy
 import subprocess
 import sys
 from pathlib import Path
@@ -143,6 +145,27 @@ def test_visualize_webcam_varying_grayscale(monkeypatch, quiet_console):
     prediction = np.linspace(0, 1, 32).reshape(1, 4, 4, 2)
     asanai.visualize_webcam(SimpleNamespace(predict=lambda *args, **kwargs: prediction))
     assert capture.released
+
+
+def test_module_import_failure_is_measured(monkeypatch, capsys):
+    project_root = Path(__file__).resolve().parents[1]
+    real_import = builtins.__import__
+
+    def blocking_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "psutil" or name.startswith("psutil."):
+            raise ModuleNotFoundError("blocked for test")
+        return real_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", blocking_import)
+
+    with pytest.raises(SystemExit) as exc:
+        runpy.run_path(
+            str(project_root / "asanai.py"),
+            run_name="asanai_import_failure",
+        )
+
+    assert exc.value.code == 1
+    assert "Failed to load module" in capsys.readouterr().out
 
 
 def test_module_import_failure_exits_cleanly():

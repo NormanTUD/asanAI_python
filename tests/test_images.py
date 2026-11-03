@@ -228,6 +228,13 @@ def test_load_and_prepare_image_branches(monkeypatch):
     assert asanai._load_and_prepare_image("x.png", channel_model) is None
 
 
+def test_load_and_prepare_image_correct_size(monkeypatch):
+    model = _model(input_shape=(None, 4, 4, 3))
+    monkeypatch.setattr(asanai, "load", lambda path: np.zeros((1, 4, 4, 3)))
+    prepared = asanai._load_and_prepare_image("x.png", model)
+    assert prepared.shape == (4, 4, 3)
+
+
 def test_load_and_prepare_image_resize_error(monkeypatch):
     model = _model(input_shape=(None, 4, 4, 3))
     monkeypatch.setattr(asanai, "load", lambda path: np.zeros((1, 8, 8, 3)))
@@ -259,6 +266,17 @@ def test_show_image_in_window(monkeypatch):
 
     monkeypatch.setattr(asanai.cv2, "getWindowProperty", lambda *args: 1)
     monkeypatch.setattr(asanai.cv2, "waitKey", lambda delay: 113)
+    asanai._show_image_in_window(np.zeros((2, 2, 3), dtype=np.uint8), "window")
+
+
+def test_show_image_in_window_continues_until_window_closes(monkeypatch):
+    monkeypatch.setattr(asanai.cv2, "imshow", lambda *args: None)
+    monkeypatch.setattr(asanai.cv2, "waitKey", lambda delay: -1)
+    properties = iter([1, 0])
+    monkeypatch.setattr(
+        asanai.cv2, "getWindowProperty", lambda *args: next(properties)
+    )
+    monkeypatch.setattr(asanai.cv2, "destroyAllWindows", lambda: None)
     asanai._show_image_in_window(np.zeros((2, 2, 3), dtype=np.uint8), "window")
 
 
@@ -386,6 +404,20 @@ def test_visualize_webcam_frame_preprocess_failure(monkeypatch, quiet_console):
     monkeypatch.setattr(asanai.cv2, "getWindowProperty", lambda *args: 0)
     monkeypatch.setattr(asanai.cv2, "destroyAllWindows", lambda: None)
     asanai.visualize_webcam(_model())
+
+
+def test_visualize_webcam_loop_continues(monkeypatch, quiet_console):
+    frame = np.zeros((8, 8, 3), dtype=np.uint8)
+    capture = _Capture([(True, frame), (True, frame)])
+    _patch_capture(monkeypatch, capture)
+    monkeypatch.setattr(asanai, "load_frame", lambda *args: np.zeros((1, 4, 4, 3)))
+    monkeypatch.setattr(asanai.cv2, "imshow", lambda *args: None)
+    keys = iter([-1, ord("q")])
+    monkeypatch.setattr(asanai.cv2, "waitKey", lambda delay: next(keys))
+    monkeypatch.setattr(asanai.cv2, "getWindowProperty", lambda *args: 1)
+    monkeypatch.setattr(asanai.cv2, "destroyAllWindows", lambda: None)
+    asanai.visualize_webcam(_model(prediction=np.zeros((1, 4, 4, 3))))
+    assert capture.released
 
 
 def test_visualize_webcam_window_closed(monkeypatch, quiet_console):

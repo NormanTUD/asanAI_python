@@ -1722,7 +1722,7 @@ def visualize_webcam(
                         disp_img = cv2.cvtColor(disp_img, cv2.COLOR_RGB2BGR) # pylint: disable=no-member
                         cv2.imshow(window_name, disp_img) # pylint: disable=no-member
 
-                    elif num_channels != 3:
+                    else:
                         gray_imgs = []
                         for c in range(num_channels):
                             channel = output[..., c]
@@ -1737,9 +1737,6 @@ def visualize_webcam(
 
                         combined_img = np.hstack(gray_imgs)
                         cv2.imshow(window_name, combined_img) # pylint: disable=no-member
-
-                    else:
-                        console.print(f"[yellow]Unsupported model output shape for display: {output.shape}[/yellow]")
                 else:
                     console.print(f"[yellow]Unsupported model output shape for display: {output.shape}[/yellow]")
 
